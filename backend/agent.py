@@ -251,7 +251,10 @@ class StreamingAgent:
         
         # Check if we should use Orq AI instead of OpenAI
         if self.use_orq:
-            return await self._call_orq_llm(api_params)
+            # Use async for to yield from another async generator
+            async for event in self._call_orq_llm(api_params):
+                yield event
+            return
             
         # Get streaming response from OpenAI
         stream = await self.client.chat.completions.create(**api_params)

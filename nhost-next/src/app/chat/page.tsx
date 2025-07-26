@@ -151,27 +151,31 @@ interface MessageData {
 }
 
 // Helper function to generate thread title
-const generateThreadTitle = async (userMessage: string): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/generate-title', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userMessage }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Title generation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.title || null;
-  } catch (error) {
-    console.error("Error generating title:", error);
-    return null;
-  }
-};
+// Removing this function
+// const generateThreadTitle = async (userMessage: string): Promise<string | null> => {
+//   try {
+//     // Add a small delay to ensure the title generation doesn't interfere with chat
+//     await new Promise(resolve => setTimeout(resolve, 100));
+//     
+//     const response = await fetch('/api/generate-title', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({ userMessage }),
+//     });
+// 
+//     if (!response.ok) {
+//       throw new Error(`Title generation failed: ${response.status}`);
+//     }
+// 
+//     const data = await response.json();
+//     return data.title || null;
+//   } catch (error) {
+//     console.error("Error generating title:", error);
+//     return null;
+//   }
+// };
 
 export default function ChatInterface() {
 	const { isAuthenticated, isLoading } = useAuthenticationStatus();
@@ -241,13 +245,7 @@ export default function ChatInterface() {
 				// Check if this is the first message in the thread
 				const isFirstMessage = messages.length === 0;
 
-				// Start title generation process if this is the first message
-				let titleGenerationPromise: Promise<string | null> = Promise.resolve(null);
-				if ((isFirstMessage || newChat) && threadId && threadId !== "default") {
-					titleGenerationPromise = generateThreadTitle(query);
-				}
-
-				// Process the message
+				// Process the message first
 				(async () => {
 					try {
 						// Save user message to database if we have a valid thread
@@ -342,39 +340,15 @@ export default function ChatInterface() {
 									: thread,
 							),
 						);
-
-						// Handle title generation
-						const generatedTitle = await titleGenerationPromise;
-						if (generatedTitle && threadId && threadId !== "default") {
-							try {
-								const { error: titleError } = await nhost.graphql.request(
-									updateThreadTitleMutation,
-									{
-										id: threadId,
-										title: generatedTitle
-									}
-								);
-
-								if (!titleError) {
-									// Update thread title in the UI
-									setThreads((prev) =>
-										prev.map((thread) =>
-											thread.id === threadId
-												? { ...thread, title: generatedTitle }
-												: thread
-										)
-									);
-								}
-							} catch (err) {
-								console.error("Failed to update thread title:", err);
-							}
-						}
 						
 						// Clean the URL by removing the query parameters
 						const url = new URL(window.location.href);
 						url.searchParams.delete('query');
 						url.searchParams.delete('new');
 						window.history.replaceState({}, '', url);
+						
+						// Now handle title generation after chat is complete
+						// Removing title generation logic
 						
 					} catch (error) {
 						console.error("Error processing auto-query:", error);
@@ -520,16 +494,6 @@ export default function ChatInterface() {
 		// Check if this is the first message in the thread
 		const isFirstMessage = messages.length === 0;
 
-		// Start title generation process if this is the first message
-		// This runs in parallel with the message processing
-		let titleGenerationPromise: Promise<string | null> = Promise.resolve(null);
-		if (isFirstMessage && activeThreadId && activeThreadId !== "default") {
-			titleGenerationPromise = generateThreadTitle(currentInput);
-		}
-
-		// Variable to store the saved user message ID (if successful)
-		let savedUserMessageId: string | null = null;
-
 		try {
 			// Save user message to database if we have a valid thread
 			if (activeThreadId && activeThreadId !== "default" && user?.id) {
@@ -546,8 +510,6 @@ export default function ChatInterface() {
 
 					if (messageError) {
 						console.error("Error saving user message:", messageError);
-					} else if (messageData?.insert_messages_one?.id) {
-						savedUserMessageId = messageData.insert_messages_one.id;
 					}
 				} catch (err) {
 					console.error("Failed to save user message:", err);
@@ -633,6 +595,9 @@ export default function ChatInterface() {
 						: thread,
 				),
 			);
+			
+			// Removing title generation logic
+			
 		} catch (error) {
 			console.error("Error getting AI response:", error);
 
@@ -670,36 +635,6 @@ export default function ChatInterface() {
 			}
 		} finally {
 			setIsSending(false);
-			
-			// Handle title generation result regardless of message success/failure
-			try {
-				const generatedTitle = await titleGenerationPromise;
-				if (generatedTitle && activeThreadId && activeThreadId !== "default") {
-					// Update thread title in the database
-					const { data: titleData, error: titleError } = await nhost.graphql.request(
-						updateThreadTitleMutation,
-						{
-							id: activeThreadId,
-							title: generatedTitle
-						}
-					);
-
-					if (titleError) {
-						console.error("Error updating thread title:", titleError);
-					} else {
-						// Update thread title in the UI
-						setThreads((prev) =>
-							prev.map((thread) =>
-								thread.id === activeThreadId
-									? { ...thread, title: generatedTitle }
-									: thread
-							)
-						);
-					}
-				}
-			} catch (err) {
-				console.error("Failed to process title generation:", err);
-			}
 		}
 	};
 

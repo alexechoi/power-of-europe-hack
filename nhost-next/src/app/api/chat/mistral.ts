@@ -4,10 +4,6 @@ const mistral = new Mistral({
 	apiKey: process.env.MISTRAL_API_KEY,
 });
 
-if (!process.env.MISTRAL_API_KEY) {
-	throw new Error("Mistral API key not found");
-}
-
 export interface ChatMessage {
 	role: "user" | "assistant" | "system";
 	content: string;

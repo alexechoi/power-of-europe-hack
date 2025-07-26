@@ -18,7 +18,7 @@ A modern, full-stack boilerplate template built with **Next.js** and **Nhost.io*
 
 ```bash
 git clone <your-repo-url>
-cd nhost-next-template/nhost-next
+cd nhost-next
 npm install
 ```
 

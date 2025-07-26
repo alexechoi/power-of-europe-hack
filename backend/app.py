@@ -35,7 +35,7 @@ active_connections: List[WebSocket] = []
 server_start_time = time.time()
 
 # Orq AI configuration
-USE_ORQ = os.getenv("USE_ORQ", "true").lower() == "true"
+USE_ORQ = os.getenv("USE_ORQ", "false").lower() == "true"
 ORQ_API_KEY = os.getenv("ORQ_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3b3Jrc3BhY2VJZCI6ImVkZjM2ODY5LWRhMDMtNGZmZi04N2JhLTFlMDU2ODA5Yjg2NiIsImlzcyI6Im9ycSIsImlhdCI6MTc1MzUzMzU1MX0.INzShWRIUHf22xvxlREwP5UoGjEv68JZ2idYbWa7HmI")
 ORQ_DEPLOYMENT_KEY = os.getenv("ORQ_DEPLOYMENT_KEY", "mistral-saba")
 ORQ_CONTACT_ID = os.getenv("ORQ_CONTACT_ID", "contact_hackathon")

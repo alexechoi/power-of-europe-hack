@@ -47,10 +47,9 @@ interface Thread {
 // GraphQL query to fetch user threads
 const getUserThreads = `
   query GetUserThreads($user_id: uuid!) {
-    chat_threads(where: {user_id: {_eq: $user_id}}, order_by: {updated_at: desc}) {
+    threads(where: {user_id: {_eq: $user_id}}, order_by: {updated_at: desc}) {
       id
       title
-      last_message
       created_at
       updated_at
     }
@@ -60,32 +59,28 @@ const getUserThreads = `
 // GraphQL mutation to create a new thread
 const createThreadMutation = `
   mutation CreateThread($title: String!, $user_id: uuid!) {
-    insert_chat_threads_one(object: {
+    insert_threads_one(object: {
       title: $title,
-      user_id: $user_id,
-      last_message: "Start a new conversation..."
+      user_id: $user_id
     }) {
       id
       title
-      last_message
       created_at
       updated_at
     }
   }
 `;
 
-// GraphQL mutation to update a thread's last message
+// GraphQL mutation to update a thread's timestamp
 const updateThreadMutation = `
-  mutation UpdateThread($id: uuid!, $last_message: String!) {
-    update_chat_threads_by_pk(
+  mutation UpdateThread($id: uuid!) {
+    update_threads_by_pk(
       pk_columns: {id: $id}, 
       _set: {
-        last_message: $last_message,
         updated_at: "now()"
       }
     ) {
       id
-      last_message
       updated_at
     }
   }
@@ -95,7 +90,6 @@ const updateThreadMutation = `
 interface ThreadData {
   id: string;
   title: string;
-  last_message: string;
   created_at: string;
   updated_at: string;
 }
@@ -144,7 +138,7 @@ export default function ChatInterface() {
 				if (error) {
 					console.error("GraphQL Error:", error);
 					setThreadsError(
-						"Failed to fetch threads. Make sure GraphQL permissions are set up correctly."
+						"Failed to fetch threads. " + JSON.stringify(error)
 					);
 					// Fallback to a default thread if there's an error
 					setThreads([
@@ -157,10 +151,10 @@ export default function ChatInterface() {
 					]);
 					setActiveThreadId("default");
 				} else {
-					const fetchedThreads = data?.chat_threads.map((thread: ThreadData) => ({
+					const fetchedThreads = data?.threads.map((thread: ThreadData) => ({
 						id: thread.id,
 						title: thread.title,
-						lastMessage: thread.last_message,
+						lastMessage: "No messages yet", // This is just for UI display now
 						timestamp: new Date(thread.updated_at),
 					})) || [];
 					
@@ -252,12 +246,11 @@ export default function ChatInterface() {
 			// Add bot response
 			setMessages((prev) => [...prev, botMessage]);
 
-			// Update thread with last message in the database
+			// Update thread timestamp in the database
 			if (activeThreadId && activeThreadId !== "default") {
 				try {
 					await nhost.graphql.request(updateThreadMutation, {
-						id: activeThreadId,
-						last_message: currentInput,
+						id: activeThreadId
 					});
 				} catch (err) {
 					console.error("Failed to update thread:", err);
@@ -313,7 +306,7 @@ export default function ChatInterface() {
 				throw new Error("Failed to create thread");
 			}
 
-			const newThread = data?.insert_chat_threads_one;
+			const newThread = data?.insert_threads_one;
 			
 			if (!newThread) {
 				throw new Error("No thread returned from creation");
@@ -322,7 +315,7 @@ export default function ChatInterface() {
 			const threadObj: Thread = {
 				id: newThread.id,
 				title: newThread.title,
-				lastMessage: newThread.last_message,
+				lastMessage: "Start a new conversation...", // Default UI text
 				timestamp: new Date(newThread.updated_at),
 			};
 

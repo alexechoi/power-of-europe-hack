@@ -13,7 +13,7 @@ class OrqWrapper:
     def __init__(
         self,
         api_key: str = os.getenv("ORQ_API_KEY", "default_api_key"),
-        deployment_key: str = "Deployment_Example",
+        deployment_key: str = "mistral-saba",
         contact_id: str = "contact_hackathon"
     ):
         """Initialize the Orq wrapper with API key and deployment key"""

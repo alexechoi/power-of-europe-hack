@@ -1,0 +1,23 @@
+table:
+  name: threads
+  schema: public
+insert_permissions:
+  - role: user
+    permission:
+      check: {}
+      columns:
+        - id
+        - user_id
+        - title
+        - created_at
+        - updated_at
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - user_id
+        - title
+        - created_at
+        - updated_at
+      filter: {}

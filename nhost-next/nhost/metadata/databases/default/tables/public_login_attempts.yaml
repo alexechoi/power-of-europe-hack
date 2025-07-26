@@ -1,0 +1,45 @@
+table:
+  name: login_attempts
+  schema: public
+insert_permissions:
+  - role: public
+    permission:
+      check: {}
+      columns:
+        - id
+        - user_id
+        - success
+        - timestamp
+        - ip_address
+        - user_agent
+  - role: user
+    permission:
+      check: {}
+      columns:
+        - id
+        - user_id
+        - success
+        - timestamp
+        - ip_address
+        - user_agent
+select_permissions:
+  - role: public
+    permission:
+      columns:
+        - id
+        - user_id
+        - success
+        - timestamp
+        - ip_address
+        - user_agent
+      filter: {}
+  - role: user
+    permission:
+      columns:
+        - id
+        - user_id
+        - success
+        - timestamp
+        - ip_address
+        - user_agent
+      filter: {}

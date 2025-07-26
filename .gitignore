@@ -1,0 +1,5 @@
+/nhost-next/.next
+/nhost-next/node_modules
+.env
+.DS_Store*
+.secrets

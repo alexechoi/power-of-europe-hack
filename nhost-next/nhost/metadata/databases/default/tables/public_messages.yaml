@@ -1,0 +1,25 @@
+table:
+  name: messages
+  schema: public
+insert_permissions:
+  - role: user
+    permission:
+      check: {}
+      columns:
+        - id
+        - thread_id
+        - user_id
+        - is_user
+        - content
+        - created_at
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - thread_id
+        - user_id
+        - is_user
+        - content
+        - created_at
+      filter: {}

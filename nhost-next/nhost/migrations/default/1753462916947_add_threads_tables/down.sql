@@ -1,0 +1,35 @@
+-- Could not auto-generate a down migration.
+-- Please write an appropriate down migration for the SQL below:
+-- -- Create threads table
+-- CREATE TABLE public.threads (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   user_id UUID NOT NULL,
+--   title TEXT,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--
+--   CONSTRAINT fk_thread_user
+--     FOREIGN KEY (user_id)
+--     REFERENCES auth.users(id)
+--     ON DELETE CASCADE
+-- );
+--
+-- -- Create messages table
+-- CREATE TABLE public.messages (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   thread_id UUID NOT NULL,
+--   user_id UUID NOT NULL,
+--   is_user BOOLEAN NOT NULL,
+--   content TEXT NOT NULL,
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--
+--   CONSTRAINT fk_message_thread
+--     FOREIGN KEY (thread_id)
+--     REFERENCES public.threads(id)
+--     ON DELETE CASCADE,
+--
+--   CONSTRAINT fk_message_user
+--     FOREIGN KEY (user_id)
+--     REFERENCES auth.users(id)
+--     ON DELETE CASCADE
+-- );

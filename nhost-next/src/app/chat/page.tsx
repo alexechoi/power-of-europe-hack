@@ -7,7 +7,7 @@ import {
 	useUserData,
 	useSignOut,
 } from "@nhost/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { nhost } from "../../lib/nhost";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,6 +178,7 @@ export default function ChatInterface() {
 	const user = useUserData();
 	const { signOut } = useSignOut();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [inputValue, setInputValue] = useState("");
 	const [isSending, setIsSending] = useState(false);
@@ -202,6 +203,187 @@ export default function ChatInterface() {
 			router.push("/auth");
 		}
 	}, [isAuthenticated, isLoading, router]);
+
+	// Handle query parameter for auto-sending a message
+	useEffect(() => {
+		const query = searchParams.get('query');
+		
+		// Only proceed if we have a query, user is authenticated, and we have an active thread
+		if (query && isAuthenticated && activeThreadId && !isSending && user?.id) {
+			// Set the input value to the query
+			setInputValue(query);
+			
+			// Create a small delay to ensure the component is fully rendered
+			const timer = setTimeout(() => {
+				// Create a temporary message object for immediate UI update
+				const tempUserMessage: Message = {
+					id: Date.now().toString(),
+					content: query,
+					isUser: true,
+					timestamp: new Date(),
+				};
+
+				// Add user message immediately to UI
+				setMessages((prev) => [...prev, tempUserMessage]);
+				setIsSending(true);
+
+				// Check if this is the first message in the thread
+				const isFirstMessage = messages.length === 0;
+
+				// Start title generation process if this is the first message
+				let titleGenerationPromise: Promise<string | null> = Promise.resolve(null);
+				if (isFirstMessage && activeThreadId && activeThreadId !== "default") {
+					titleGenerationPromise = generateThreadTitle(query);
+				}
+
+				// Process the message
+				(async () => {
+					try {
+						// Save user message to database if we have a valid thread
+						if (activeThreadId && activeThreadId !== "default") {
+							try {
+								await nhost.graphql.request(
+									insertMessageMutation,
+									{
+										thread_id: activeThreadId,
+										user_id: user.id,
+										content: query,
+										is_user: true,
+									}
+								);
+							} catch (err) {
+								console.error("Failed to save user message:", err);
+							}
+						}
+
+						// Prepare conversation history for Mistral
+						const conversationHistory: ChatMessage[] = [
+							...messages.map((msg) => ({
+								role: msg.isUser ? ("user" as const) : ("assistant" as const),
+								content: msg.content,
+							})),
+							{
+								role: "user" as const,
+								content: query,
+							},
+						];
+
+						// Get response from Mistral via API route
+						const response = await fetch('/api/chat', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify({ messages: conversationHistory }),
+						});
+
+						if (!response.ok) {
+							throw new Error(`API request failed: ${response.status}`);
+						}
+
+						const data = await response.json();
+						const aiResponse = data.response;
+
+						// Create temporary bot message for UI
+						const tempBotMessage: Message = {
+							id: (Date.now() + 1).toString(),
+							content: aiResponse,
+							isUser: false,
+							timestamp: new Date(),
+						};
+
+						// Add bot response to UI
+						setMessages((prev) => [...prev, tempBotMessage]);
+
+						// Save bot message to database if we have a valid thread
+						if (activeThreadId && activeThreadId !== "default") {
+							try {
+								await nhost.graphql.request(
+									insertMessageMutation,
+									{
+										thread_id: activeThreadId,
+										user_id: user.id,
+										content: aiResponse,
+										is_user: false,
+									}
+								);
+							} catch (err) {
+								console.error("Failed to save bot message:", err);
+							}
+						}
+
+						// Update thread timestamp in the database
+						if (activeThreadId && activeThreadId !== "default") {
+							try {
+								await nhost.graphql.request(updateThreadMutation, {
+									id: activeThreadId
+								});
+							} catch (err) {
+								console.error("Failed to update thread:", err);
+							}
+						}
+
+						// Update local thread state
+						setThreads((prev) =>
+							prev.map((thread) =>
+								thread.id === activeThreadId
+									? { ...thread, lastMessage: query, timestamp: new Date() }
+									: thread,
+							),
+						);
+
+						// Handle title generation
+						const generatedTitle = await titleGenerationPromise;
+						if (generatedTitle && activeThreadId && activeThreadId !== "default") {
+							try {
+								const { error: titleError } = await nhost.graphql.request(
+									updateThreadTitleMutation,
+									{
+										id: activeThreadId,
+										title: generatedTitle
+									}
+								);
+
+								if (!titleError) {
+									// Update thread title in the UI
+									setThreads((prev) =>
+										prev.map((thread) =>
+											thread.id === activeThreadId
+												? { ...thread, title: generatedTitle }
+												: thread
+										)
+									);
+								}
+							} catch (err) {
+								console.error("Failed to update thread title:", err);
+							}
+						}
+						
+						// Clean the URL by removing the query parameter
+						const url = new URL(window.location.href);
+						url.searchParams.delete('query');
+						window.history.replaceState({}, '', url);
+						
+					} catch (error) {
+						console.error("Error processing auto-query:", error);
+						
+						// Add error message to UI
+						const errorMessage: Message = {
+							id: (Date.now() + 1).toString(),
+							content: "Sorry, I encountered an error while processing your message. Please try again.",
+							isUser: false,
+							timestamp: new Date(),
+						};
+						setMessages((prev) => [...prev, errorMessage]);
+					} finally {
+						setIsSending(false);
+					}
+				})();
+			}, 500);
+			
+			return () => clearTimeout(timer);
+		}
+	}, [isAuthenticated, activeThreadId, searchParams, user?.id, messages]);
 
 	// Fetch user threads when component mounts
 	useEffect(() => {
@@ -553,6 +735,8 @@ export default function ChatInterface() {
 			if (!isInitial) {
 				setSidebarOpen(false);
 			}
+			
+			return threadObj.id;
 		} catch (err) {
 			console.error("Error creating thread:", err);
 			
@@ -571,6 +755,8 @@ export default function ChatInterface() {
 			if (!isInitial) {
 				setSidebarOpen(false);
 			}
+			
+			return fallbackThread.id;
 		}
 	};
 

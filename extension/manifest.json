@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Google Search Enhancer",
+  "version": "1.0",
+  "description": "Adds custom search results above existing Google search results",
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://www.google.com/search*", "*://google.com/search*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
+

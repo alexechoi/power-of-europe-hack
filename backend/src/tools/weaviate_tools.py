@@ -1,43 +1,52 @@
 import os
+import logging
 import weaviate
+from weaviate import Client, use_async_with_weaviate_cloud, classes
 from weaviate_agents.classes import QueryAgentCollectionConfig
 
-def get_weaviate_client():
+headers = {
+    "X-OpenAI-Api-Key": os.environ.get("OPENAI_API_KEY"),
+    "X-OpenAI-Baseurl": os.environ.get("OPENAI_BASE_URL"),
+}
+
+async def get_weaviate_client():
     """
     Connect to a Weaviate Cloud instance using environment variables:
     - WEAVIATE_URL: The Weaviate Cloud endpoint URL
     - WEAVIATE_API_KEY: The API key for authentication
     Returns a connected Weaviate client instance.
     """
-    weaviate_url = os.environ.get("WEAVIATE_URL")
-    weaviate_api_key = os.environ.get("WEAVIATE_API_KEY")
+    weaviate_url = os.environ.get("WEAVIATE_INSTANCE_URL")
+    weaviate_api_key = os.environ.get("WEAVIATE_INSTANCE_API_KEY")
     if not weaviate_url or not weaviate_api_key:
         raise ValueError("WEAVIATE_URL and WEAVIATE_API_KEY must be set in environment variables.")
-    client = weaviate.connect_to_weaviate_cloud(
+    client = use_async_with_weaviate_cloud(
         cluster_url=weaviate_url,
-        auth_credentials=weaviate.classes.init.Auth.api_key(weaviate_api_key),
+        auth_credentials=classes.init.Auth.api_key(weaviate_api_key),
+        headers=headers,
     )
+    await client.connect()
     return client
 
 
-def is_weaviate_ready(client=None):
+async def is_weaviate_ready(client=None):
     """
     Check if the Weaviate Cloud instance is ready.
     If no client is provided, a new one will be created and closed after the check.
     """
     close_client = False
     if client is None:
-        client = get_weaviate_client()
+        client = await get_weaviate_client()
         close_client = True
     try:
-        ready = client.is_ready()
+        ready = await client.is_ready()
     finally:
         if close_client:
-            client.close()
+            await client.close()
     return ready
 
 
-def get_query_agent(collection_name, client=None):
+async def get_query_agent(collection_name, client=None):
     """
     Return a QueryAgent for the specified collection name.
     If no client is provided, a new one will be created and closed after use.
@@ -45,10 +54,10 @@ def get_query_agent(collection_name, client=None):
 
     close_client = False
     if client is None:
-        client = get_weaviate_client()
+        client = await get_weaviate_client()
         close_client = True
     try:
-        agent = weaviate.agents.query.QueryAgent(
+        agent = weaviate.agents.query.AsyncQueryAgent(
             client=client,
             collections=[
                 QueryAgentCollectionConfig(
@@ -61,18 +70,25 @@ def get_query_agent(collection_name, client=None):
         )
     finally:
         if close_client:
-            client.close()
+            await client.close()
     return agent
 
 
-def query_tool_by_name(tool_name: str, collection_name: str = "EUToolsAlternatives"):
+async def query_tool_by_name(tool_name: str):
     """
     Query the QueryAgent for the given tool name in the specified collection.
     Returns the result of the query.
     """
-    agent = get_query_agent(collection_name)
-    # The QueryAgent interface may vary; assuming a 'query' method that takes a string
-    result = agent.run(f"Please find EU based tools that are similar to {tool_name}")
+    logging.info("Getting the query agent!")
+    agent = await get_query_agent("EUToolsAlternatives")
+    logging.info(f"retreived query agent: {agent}")
+    # The QueryAgent interface may vary; assuming an async 'run' method that takes a string
+    try:
+        result = await agent.run(f"Please find EU based tools that are similar to {tool_name}")
+    except Exception as e:
+        logging.error(f"Failed to query agent for tool '{tool_name}': {e}", exc_info=True)
+        result = None
+    logging.info(f"Got result {getattr(result, 'final_answer', None)}")
     return result
 
 

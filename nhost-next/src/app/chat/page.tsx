@@ -207,14 +207,25 @@ export default function ChatInterface() {
 	// Handle query parameter for auto-sending a message
 	useEffect(() => {
 		const query = searchParams.get('query');
+		const newChat = searchParams.get('new') === 'true';
 		
-		// Only proceed if we have a query, user is authenticated, and we have an active thread
-		if (query && isAuthenticated && activeThreadId && !isSending && user?.id) {
-			// Set the input value to the query
-			setInputValue(query);
-			
+		// Only proceed if we have a query and user is authenticated
+		if (query && isAuthenticated && user?.id && !isSending) {
 			// Create a small delay to ensure the component is fully rendered
-			const timer = setTimeout(() => {
+			const timer = setTimeout(async () => {
+				let threadId = activeThreadId || "";
+				
+				// Create a new thread if requested or if no active thread exists
+				if (newChat || !threadId || threadId === "default") {
+					const newThreadId = await createNewThread(false);
+					if (newThreadId) {
+						threadId = newThreadId;
+					}
+				}
+				
+				// Set the input value to the query
+				setInputValue(query);
+				
 				// Create a temporary message object for immediate UI update
 				const tempUserMessage: Message = {
 					id: Date.now().toString(),
@@ -232,7 +243,7 @@ export default function ChatInterface() {
 
 				// Start title generation process if this is the first message
 				let titleGenerationPromise: Promise<string | null> = Promise.resolve(null);
-				if (isFirstMessage && activeThreadId && activeThreadId !== "default") {
+				if ((isFirstMessage || newChat) && threadId && threadId !== "default") {
 					titleGenerationPromise = generateThreadTitle(query);
 				}
 
@@ -240,12 +251,12 @@ export default function ChatInterface() {
 				(async () => {
 					try {
 						// Save user message to database if we have a valid thread
-						if (activeThreadId && activeThreadId !== "default") {
+						if (threadId && threadId !== "default") {
 							try {
 								await nhost.graphql.request(
 									insertMessageMutation,
 									{
-										thread_id: activeThreadId,
+										thread_id: threadId,
 										user_id: user.id,
 										content: query,
 										is_user: true,
@@ -296,12 +307,12 @@ export default function ChatInterface() {
 						setMessages((prev) => [...prev, tempBotMessage]);
 
 						// Save bot message to database if we have a valid thread
-						if (activeThreadId && activeThreadId !== "default") {
+						if (threadId && threadId !== "default") {
 							try {
 								await nhost.graphql.request(
 									insertMessageMutation,
 									{
-										thread_id: activeThreadId,
+										thread_id: threadId,
 										user_id: user.id,
 										content: aiResponse,
 										is_user: false,
@@ -313,10 +324,10 @@ export default function ChatInterface() {
 						}
 
 						// Update thread timestamp in the database
-						if (activeThreadId && activeThreadId !== "default") {
+						if (threadId && threadId !== "default") {
 							try {
 								await nhost.graphql.request(updateThreadMutation, {
-									id: activeThreadId
+									id: threadId
 								});
 							} catch (err) {
 								console.error("Failed to update thread:", err);
@@ -326,7 +337,7 @@ export default function ChatInterface() {
 						// Update local thread state
 						setThreads((prev) =>
 							prev.map((thread) =>
-								thread.id === activeThreadId
+								thread.id === threadId
 									? { ...thread, lastMessage: query, timestamp: new Date() }
 									: thread,
 							),
@@ -334,12 +345,12 @@ export default function ChatInterface() {
 
 						// Handle title generation
 						const generatedTitle = await titleGenerationPromise;
-						if (generatedTitle && activeThreadId && activeThreadId !== "default") {
+						if (generatedTitle && threadId && threadId !== "default") {
 							try {
 								const { error: titleError } = await nhost.graphql.request(
 									updateThreadTitleMutation,
 									{
-										id: activeThreadId,
+										id: threadId,
 										title: generatedTitle
 									}
 								);
@@ -348,7 +359,7 @@ export default function ChatInterface() {
 									// Update thread title in the UI
 									setThreads((prev) =>
 										prev.map((thread) =>
-											thread.id === activeThreadId
+											thread.id === threadId
 												? { ...thread, title: generatedTitle }
 												: thread
 										)
@@ -359,9 +370,10 @@ export default function ChatInterface() {
 							}
 						}
 						
-						// Clean the URL by removing the query parameter
+						// Clean the URL by removing the query parameters
 						const url = new URL(window.location.href);
 						url.searchParams.delete('query');
+						url.searchParams.delete('new');
 						window.history.replaceState({}, '', url);
 						
 					} catch (error) {

@@ -40,20 +40,19 @@
 
             else {
                 try {
-                    const openingBracketIndex = response.lastIndexOf('[');
-                    if (openingBracketIndex !== -1) {
-                        jsonText_part1 = response.substring(openingBracketIndex);
+                    // Look for JSON array in the response text
+                    const openingBracketIndex = response.indexOf('[');
+                    const closingBracketIndex = response.lastIndexOf(']');
+                    
+                    if (openingBracketIndex !== -1 && closingBracketIndex !== -1 && closingBracketIndex > openingBracketIndex) {
+                        const jsonText = response.substring(openingBracketIndex, closingBracketIndex + 1);
+                        return JSON.parse(jsonText);
                     }
-                    else {
-                        jsonText_part1 = response;
-                    }
-                    const closingBracketIndex = jsonText_part1.lastIndexOf(']');
-                    if (closingBracketIndex !== -1) {
-                        jsonText = jsonText_part1.substring(0, closingBracketIndex + 1);
-                    }
-                    return JSON.parse(jsonText);
+                    
+                    console.error('No valid JSON array found in response');
+                    return null;
                 } catch (parseError) {
-                    console.error('Error parsing JSON from code block:', parseError);
+                    console.error('Error parsing JSON from response text:', parseError);
                     return null;
                 }
             }

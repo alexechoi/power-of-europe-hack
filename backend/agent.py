@@ -11,6 +11,7 @@ import os
 load_dotenv()
 
 from src.tools import *
+from src.prompt import system_prompt
 
 
 class StreamingAgent:

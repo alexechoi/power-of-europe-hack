@@ -123,6 +123,29 @@ async def query_tool_return_json(service_description: str, limit: int = 10):
     await client.close()
     return output_string if found else "No alternatives found"
 
+async def find_more_information(service_name: str):
+    """
+    Find more information about the given service name.
+    """
+    client = await get_weaviate_client()
+        
+    collection = client.collections.get("EUToolsAlternatives")
+    response = await collection.query.near_text(
+        query=service_name,
+        limit=2,
+        return_metadata=MetadataQuery(distance=True)
+    )
+    found = False
+
+    output_string = "Found the following information:\n"
+    for o in response.objects:
+        output_string = str(o.properties)
+        found=True
+        break
+    
+    await client.close()
+    return output_string if found else "No Service found"
+
 if __name__ == "__main__":
     import asyncio
     print(asyncio.run(query_tool_return_json("Cloud hosting service")))

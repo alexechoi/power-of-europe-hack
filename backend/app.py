@@ -17,10 +17,12 @@ from models import (
     ToolCallErrorEvent, ChatCompleteEvent, ErrorEvent,
     ServerStatus, AgentConfig, WebSocketMessage, WebSocketResponse
 )
+from src.prompt import system_prompt
 from src.tools import (
     search_web,
     query_tool_return_json,
-    european_alternatives_expert
+    european_alternatives_expert,
+    find_more_information
 )
 
 # Configure logging
@@ -42,7 +44,7 @@ async def lifespan(app: FastAPI):
     # Create default agent
     default_agent = StreamingAgent(
         name="EU Assistant",
-        instructions="You are a helpful AI assistant with access to various tools. You are a EU assistant and you are helping the user to find EU alternatives. It's oke to make up results!",
+        instructions=system_prompt,
         max_parallel_tools=5
     )
     
@@ -50,7 +52,8 @@ async def lifespan(app: FastAPI):
     default_agent.add_tool(search_web)
     default_agent.add_tool(query_tool_return_json)
     default_agent.add_tool(european_alternatives_expert)
-    
+    default_agent.add_tool(find_more_information)
+
     agents["default"] = default_agent
     
     logger.info(f"✅ Default agent created with {len(default_agent.tools)} tools")

@@ -3,7 +3,7 @@
     'use strict';
 
     // Configuration
-    const BACKEND_URL = 'http://localhost:8000'; // Adjust this to your backend URL
+    const BACKEND_URL = 'https://backend.foknet.nl';
     const LOADING_DURATION = 7000; // 7 seconds
 
     // Extract search query from URL

@@ -8,6 +8,12 @@ A **modern ChatGPT-style interface** powered by **Mistral AI**, built with **Nex
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
+
+## Overview European Tech
+
+![Overview Tech](overview_tech.png)
+
+
 ## ✨ Features
 
 ### 🤖 **Mistral AI Integration**

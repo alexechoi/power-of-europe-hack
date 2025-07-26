@@ -69,9 +69,146 @@
     animation: pulse 1.5s ease-in-out infinite;
 }
 
+.custom-result-badge.success {
+    background-color: #34a853;
+    color: white;
+}
+
 .custom-result-badge.error {
     background-color: #f44336;
     color: white;
+}
+
+/* Alternative Cards Styles */
+.alternatives-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.alternative-card {
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    padding: 16px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.alternative-card:hover {
+    border-color: #4285f4;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.15);
+    transform: translateY(-1px);
+}
+
+.alternative-card:active {
+    transform: translateY(0);
+}
+
+.alternative-header {
+    margin-bottom: 8px;
+}
+
+.alternative-name {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a0dab;
+    line-height: 1.3;
+}
+
+.alternative-url {
+    font-size: 12px;
+    color: #006621;
+    word-break: break-all;
+    margin-bottom: 8px;
+}
+
+.alternative-description {
+    font-size: 13px;
+    color: #545454;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.alternative-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.alternative-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alternative-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #e8eaed;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #5f6368;
+}
+
+.learn-more-btn {
+    background: linear-gradient(135deg, #4285f4, #34a853);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.learn-more-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #3367d6, #2d9334);
+}
+
+.learn-more-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.learn-more-btn:focus {
+    outline: 2px solid #4285f4;
+    outline-offset: 2px;
+}
+
+.alternative-arrow {
+    font-size: 16px;
+    color: #4285f4;
+    font-weight: bold;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.alternative-card:hover .alternative-arrow {
+    opacity: 1;
+    transform: translateX(2px);
+}
+
+.no-alternatives {
+    text-align: center;
+    padding: 24px;
+    color: #5f6368;
+    font-style: italic;
 }
 
 /* Loading Bar Styles */
@@ -163,6 +300,56 @@
     .loading-bar {
         background-color: #5f6368;
     }
+
+    /* Dark mode for alternative cards */
+    .alternative-card {
+        background-color: #303134;
+        border-color: #5f6368;
+    }
+
+    .alternative-card:hover {
+        border-color: #8ab4f8;
+        box-shadow: 0 2px 8px rgba(138, 180, 248, 0.15);
+    }
+
+    .alternative-name {
+        color: #8ab4f8;
+    }
+
+    .alternative-url {
+        color: #5bb974;
+    }
+
+    .alternative-description {
+        color: #bdc1c6;
+    }
+
+    .alternative-badge {
+        background-color: #5f6368;
+        border-color: #80868b;
+        color: #e8eaed;
+    }
+
+    .alternative-arrow {
+        color: #8ab4f8;
+    }
+
+    .no-alternatives {
+        color: #9aa0a6;
+    }
+
+    .learn-more-btn {
+        background: linear-gradient(135deg, #8ab4f8, #5bb974);
+        color: #202124;
+    }
+
+    .learn-more-btn:hover {
+        background: linear-gradient(135deg, #aecbfa, #81c995);
+    }
+
+    .learn-more-btn:focus {
+        outline-color: #8ab4f8;
+    }
 }
 
 /* Responsive design */
@@ -184,6 +371,30 @@
 
     .loading-percentage {
         text-align: center;
+    }
+
+    .alternatives-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .alternative-card {
+        padding: 12px;
+    }
+
+    .alternative-name {
+        font-size: 15px;
+    }
+
+    .alternative-actions {
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+    }
+
+    .learn-more-btn {
+        font-size: 11px;
+        padding: 5px 10px;
     }
 }
 

@@ -3,7 +3,7 @@
     'use strict';
 
     // Configuration
-    const BACKEND_URL = 'https://backend.foknet.nl';
+    const BACKEND_URL = 'https://elegant-gussie-power-of-europe-fa86a983.koyeb.app';
     const LOADING_DURATION = 7000; // 7 seconds
 
     // Extract search query from URL
@@ -47,7 +47,7 @@
             const url = alt.url || '#';
             const description = alt.description || '';
             const chatQuery = encodeURIComponent(`Tell me more about ${name}`);
-            const chatUrl = `http://localhost:3000/chat?query=${chatQuery}&new=true`;
+            const chatUrl = `https://saipiens.osc-fr1.scalingo.io/chat?query=${chatQuery}&new=true`;
             
             return `
                 <div class="alternative-card" data-url="${url}" data-card-index="${index}">

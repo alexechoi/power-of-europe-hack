@@ -18,17 +18,19 @@ interface ToolCallInfo {
 	result?: string;
 	error?: string;
 	execution_time_ms?: number;
+}
 
 interface BackendChatResponse {
 	response: string;
 	tool_calls: ToolCallInfo[];
 	conversation_id?: string;
 	timestamp: string;
+}
 
 export interface ChatMessage {
 	role: "user" | "assistant" | "system";
 	content: string;
-
+	tool_calls?: ToolCallInfo[];
 }
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";

@@ -229,6 +229,7 @@ async def chat(request: ChatRequest):
             elif event["event_type"] == "tool_call":
                 tool_info = event["content"]
                 tool_calls_info.append(ToolCallInfo(
+                    id=tool_info["id"],
                     name=tool_info["function"],
                     arguments=tool_info["arguments"],
                     result=""  # Will be updated when result comes
@@ -237,8 +238,9 @@ async def chat(request: ChatRequest):
                 result_info = event["content"]
                 # Find matching tool call and update result
                 for tool_call in tool_calls_info:
-                    if tool_call.result == "":  # First unassigned result
+                    if tool_call.id == result_info["tool_call_id"]:
                         tool_call.result = result_info["result"]
+                        tool_call.status = "completed" if result_info.get("success", True) else "failed"
                         break
         
         return ChatResponse(

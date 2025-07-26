@@ -735,8 +735,8 @@ export default function ChatInterface() {
 				<div className="flex flex-col h-full">
 					{/* Header */}
 					<div className="flex items-center justify-between p-4 border-b">
-						<h1 className="text-lg font-semibold">Chats</h1>
-						<Button
+					<img src="/icon128.png" alt="Close" className="h-10 w-10" />
+					<Button
 							variant="ghost"
 							size="sm"
 							onClick={() => setSidebarOpen(false)}

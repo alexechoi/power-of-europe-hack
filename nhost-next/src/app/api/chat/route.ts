@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChatCompletion, generateThreadTitle, type ChatMessage } from "./mistral";
+import { getChatCompletion, type ChatMessage } from "./mistral";
 
 export async function POST(request: NextRequest) {
 	try {

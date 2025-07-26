@@ -82,7 +82,6 @@ def web_search_agent(query: str, name: str, service_name: str) -> dict:
     print(response_content['is_in_eu'])
     
 
-
 def main():
 
     with open('european_alternatives_final.json', 'r') as f:

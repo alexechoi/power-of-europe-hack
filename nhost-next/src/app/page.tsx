@@ -75,8 +75,8 @@ export default function Home() {
               {!isLoading &&
                 (isAuthenticated ? (
                   <Button asChild size="lg" className="bg-white text-indigo-700 hover:bg-white/90 px-8 h-14 text-lg rounded-full">
-                    <Link href="/dashboard">
-                      Open Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                    <Link href="/chat">
+                      Open Chat <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
                 ) : (
@@ -494,9 +494,11 @@ export default function Home() {
               GDPR-compliant applications with European technology.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="bg-white text-indigo-700 hover:bg-white/90 px-8 h-14 text-lg rounded-full">
-                Get Started <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+				<Link href="/chat">
+					<Button size="lg" className="bg-white text-indigo-700 hover:bg-white/90 px-8 h-14 text-lg rounded-full">
+						Open Chat <ArrowRight className="ml-2 h-5 w-5" />
+					</Button>
+				</Link>
             </div>
           </motion.div>
         </div>

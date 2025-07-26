@@ -56,6 +56,19 @@ const getUserThreads = `
   }
 `;
 
+// GraphQL query to fetch messages for a thread
+const getThreadMessages = `
+  query GetThreadMessages($thread_id: uuid!) {
+    messages(where: {thread_id: {_eq: $thread_id}}, order_by: {created_at: asc}) {
+      id
+      content
+      is_user
+      created_at
+      user_id
+    }
+  }
+`;
+
 // GraphQL mutation to create a new thread
 const createThreadMutation = `
   mutation CreateThread($title: String!, $user_id: uuid!) {
@@ -86,12 +99,38 @@ const updateThreadMutation = `
   }
 `;
 
+// GraphQL mutation to insert a message
+const insertMessageMutation = `
+  mutation InsertMessage($thread_id: uuid!, $user_id: uuid!, $content: String!, $is_user: Boolean!) {
+    insert_messages_one(object: {
+      thread_id: $thread_id,
+      user_id: $user_id,
+      content: $content,
+      is_user: $is_user
+    }) {
+      id
+      content
+      is_user
+      created_at
+    }
+  }
+`;
+
 // Interface for thread data from GraphQL
 interface ThreadData {
   id: string;
   title: string;
   created_at: string;
   updated_at: string;
+}
+
+// Interface for message data from GraphQL
+interface MessageData {
+  id: string;
+  content: string;
+  is_user: boolean;
+  created_at: string;
+  user_id: string;
 }
 
 export default function ChatInterface() {
@@ -191,23 +230,86 @@ export default function ChatInterface() {
 		}
 	}, [isAuthenticated, user?.id]);
 
+	// Load messages when active thread changes
+	useEffect(() => {
+		async function fetchThreadMessages() {
+			if (!activeThreadId || activeThreadId === "default") {
+				setMessages([]);
+				return;
+			}
+
+			try {
+				const { data, error } = await nhost.graphql.request(getThreadMessages, {
+					thread_id: activeThreadId,
+				});
+
+				if (error) {
+					console.error("GraphQL Error:", error);
+					return;
+				}
+
+				if (data?.messages) {
+					const fetchedMessages = data.messages.map((msg: MessageData) => ({
+						id: msg.id,
+						content: msg.content,
+						isUser: msg.is_user,
+						timestamp: new Date(msg.created_at),
+					}));
+					
+					setMessages(fetchedMessages);
+				}
+			} catch (err) {
+				console.error("Error fetching messages:", err);
+			}
+		}
+
+		fetchThreadMessages();
+	}, [activeThreadId]);
+
 	const handleSendMessage = async () => {
 		if (!inputValue.trim() || isSending) return;
 
-		const userMessage: Message = {
+		// Create a temporary message object for immediate UI update
+		const tempUserMessage: Message = {
 			id: Date.now().toString(),
 			content: inputValue,
 			isUser: true,
 			timestamp: new Date(),
 		};
 
-		// Add user message immediately
-		setMessages((prev) => [...prev, userMessage]);
+		// Add user message immediately to UI
+		setMessages((prev) => [...prev, tempUserMessage]);
 		const currentInput = inputValue;
 		setInputValue("");
 		setIsSending(true);
 
+		// Variable to store the saved user message ID (if successful)
+		let savedUserMessageId: string | null = null;
+
 		try {
+			// Save user message to database if we have a valid thread
+			if (activeThreadId && activeThreadId !== "default" && user?.id) {
+				try {
+					const { data: messageData, error: messageError } = await nhost.graphql.request(
+						insertMessageMutation,
+						{
+							thread_id: activeThreadId,
+							user_id: user.id,
+							content: currentInput,
+							is_user: true,
+						}
+					);
+
+					if (messageError) {
+						console.error("Error saving user message:", messageError);
+					} else if (messageData?.insert_messages_one?.id) {
+						savedUserMessageId = messageData.insert_messages_one.id;
+					}
+				} catch (err) {
+					console.error("Failed to save user message:", err);
+				}
+			}
+
 			// Prepare conversation history for Mistral
 			const conversationHistory: ChatMessage[] = [
 				...messages.map((msg) => ({
@@ -236,15 +338,37 @@ export default function ChatInterface() {
 			const data = await response.json();
 			const aiResponse = data.response;
 
-			const botMessage: Message = {
+			// Create temporary bot message for UI
+			const tempBotMessage: Message = {
 				id: (Date.now() + 1).toString(),
 				content: aiResponse,
 				isUser: false,
 				timestamp: new Date(),
 			};
 
-			// Add bot response
-			setMessages((prev) => [...prev, botMessage]);
+			// Add bot response to UI
+			setMessages((prev) => [...prev, tempBotMessage]);
+
+			// Save bot message to database if we have a valid thread
+			if (activeThreadId && activeThreadId !== "default" && user?.id) {
+				try {
+					const { data: botMessageData, error: botMessageError } = await nhost.graphql.request(
+						insertMessageMutation,
+						{
+							thread_id: activeThreadId,
+							user_id: user.id,
+							content: aiResponse,
+							is_user: false,
+						}
+					);
+
+					if (botMessageError) {
+						console.error("Error saving bot message:", botMessageError);
+					}
+				} catch (err) {
+					console.error("Failed to save bot message:", err);
+				}
+			}
 
 			// Update thread timestamp in the database
 			if (activeThreadId && activeThreadId !== "default") {
@@ -268,7 +392,7 @@ export default function ChatInterface() {
 		} catch (error) {
 			console.error("Error getting AI response:", error);
 
-			// Add error message
+			// Create error message for UI
 			const errorMessage: Message = {
 				id: (Date.now() + 1).toString(),
 				content:
@@ -276,7 +400,30 @@ export default function ChatInterface() {
 				isUser: false,
 				timestamp: new Date(),
 			};
+			
+			// Add error message to UI
 			setMessages((prev) => [...prev, errorMessage]);
+			
+			// Save error message to database if we have a valid thread
+			if (activeThreadId && activeThreadId !== "default" && user?.id) {
+				try {
+					const { data: errorMessageData, error: errorMessageError } = await nhost.graphql.request(
+						insertMessageMutation,
+						{
+							thread_id: activeThreadId,
+							user_id: user.id,
+							content: errorMessage.content,
+							is_user: false,
+						}
+					);
+
+					if (errorMessageError) {
+						console.error("Error saving error message:", errorMessageError);
+					}
+				} catch (err) {
+					console.error("Failed to save error message:", err);
+				}
+			}
 		} finally {
 			setIsSending(false);
 		}

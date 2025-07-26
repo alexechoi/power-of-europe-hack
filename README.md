@@ -1,6 +1,6 @@
-# 💬 AI Chat Application - Nhost + Mistral AI Template
+# 💬 Saipiens - European Tech Sovereignty - Nhost + Mistral AI Template
 
-A **modern ChatGPT-style interface** powered by **Mistral AI**, built with **Next.js 15**, **Nhost.io**, and **shadcn/ui**. This template provides a complete AI chat application with authentication, intelligent responses, thread management, and a beautiful responsive design.
+A **modern ChatGPT-style interface** powered by **Mistral AI**, built with **Next.js 15**, **Nhost.io**, and **shadcn/ui**. This template provides a complete AI chat application with authentication, intelligent responses, thread management, and a beautiful responsive design, all focused on European digital sovereignty.
 
 ![Nhost + Next.js](https://img.shields.io/badge/Nhost-Next.js-blue?style=for-the-badge&logo=nextdotjs)
 ![Mistral AI](https://img.shields.io/badge/Mistral-AI-FF6B35?style=for-the-badge&logo=ai&logoColor=white)
@@ -61,7 +61,7 @@ A **modern ChatGPT-style interface** powered by **Mistral AI**, built with **Nex
 
 ## 🎯 Live Demo
 
-- Coming Soon
+You can view the agent here ([https://saipiens.osc-fr1.scalingo.io/](https://saipiens.osc-fr1.scalingo.io/))
 
 ## 🚀 Quick Start
 

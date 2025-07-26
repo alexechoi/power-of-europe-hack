@@ -87,6 +87,8 @@ class StreamingAgent:
         
         self.tools.append(function_schema)
         self.tool_functions[func.__name__] = func
+
+        print(f"{self.tool_functions}, {self.tools}")
     
     async def _execute_tool(self, tool_call) -> Tuple[str, str, bool]:
         """Execute a tool call and return (result, tool_call_id, success)"""
@@ -505,13 +507,17 @@ async def streaming_demo():
     agent.logger.setLevel(logging.INFO)
     
     # Add tools
-    agent.add_tool(get_weather)
-    agent.add_tool(calculate)
-    agent.add_tool(get_time)
+    # agent.add_tool(get_weather)
+    # agent.add_tool(calculate)
+    # agent.add_tool(get_time)
+    agent.add_tool(query_tool_by_name)
+
+    # await query_tool_by_name("AWS Cloud")
     
     queries = [
-        "What's 15 + 27?",
-        "Get the weather in Tokyo and the current time in EST",
+        # "What's 15 + 27?",
+        # "Get the weather in Tokyo and the current time in EST",
+        "Can you find me an EU alternative to 'AWS Cloud'? Use the tool 'query_tool_by_name' to find the alternative.",
         # "Tell me about the benefits of streaming responses in AI applications"
     ]
     

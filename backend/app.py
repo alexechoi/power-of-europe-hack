@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
         use_orq=USE_ORQ,
         orq_api_key=ORQ_API_KEY,
         orq_deployment_key=ORQ_DEPLOYMENT_KEY,
-        orq_contact_id=ORQ_CONTACT_ID
+        orq_contact_id=ORQ_CONTACT_ID,
         instructions=system_prompt,
         max_parallel_tools=5
     )

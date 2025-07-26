@@ -40,9 +40,16 @@
 
             else {
                 try {
-                    const closingBracketIndex = jsonText.lastIndexOf(']');
+                    const openingBracketIndex = response.lastIndexOf('[');
+                    if (openingBracketIndex !== -1) {
+                        jsonText_part1 = response.substring(openingBracketIndex);
+                    }
+                    else {
+                        jsonText_part1 = response;
+                    }
+                    const closingBracketIndex = jsonText_part1.lastIndexOf(']');
                     if (closingBracketIndex !== -1) {
-                        jsonText = jsonText.substring(0, closingBracketIndex + 1);
+                        jsonText = jsonText_part1.substring(0, closingBracketIndex + 1);
                     }
                     return JSON.parse(jsonText);
                 } catch (parseError) {
@@ -316,11 +323,30 @@ if the URL is none existing; return google url.`,
         const loadingPercentage = customResult.querySelector('.loading-percentage');
         const container = customResult.querySelector('.custom-result-container');
 
+        // Animation state
+        let isAccelerated = false;
+        let accelerationStartTime = null;
+        let accelerationStartProgress = 0;
+        let loadingInterval;
+
         // Start loading animation
         const startTime = Date.now();
-        const loadingInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min((elapsed / LOADING_DURATION) * 100, 100);
+        
+        function updateLoadingBar() {
+            const currentTime = Date.now();
+            let progress;
+            
+            if (isAccelerated && accelerationStartTime) {
+                // Accelerated mode: 10x faster
+                const acceleratedElapsed = currentTime - accelerationStartTime;
+                const acceleratedDuration = (100 - accelerationStartProgress) * (LOADING_DURATION / 100) / 10; // 10x faster
+                const acceleratedProgress = (acceleratedElapsed / acceleratedDuration) * (100 - accelerationStartProgress);
+                progress = Math.min(accelerationStartProgress + acceleratedProgress, 100);
+            } else {
+                // Normal mode
+                const elapsed = currentTime - startTime;
+                progress = Math.min((elapsed / LOADING_DURATION) * 100, 100);
+            }
             
             if (loadingFill && loadingPercentage) {
                 loadingFill.style.width = `${progress}%`;
@@ -329,24 +355,42 @@ if the URL is none existing; return google url.`,
 
             if (progress >= 100) {
                 clearInterval(loadingInterval);
+                return true; // Animation complete
             }
-        }, 50);
+            return false; // Animation continuing
+        }
+        
+        loadingInterval = setInterval(updateLoadingBar, 50);
 
         try {
             // Make the API request
             const response = await requestEUAlternatives(query);
             
-            // Wait for loading to complete if API finishes early
-            const elapsed = Date.now() - startTime;
-            if (elapsed < LOADING_DURATION) {
-                await new Promise(resolve => setTimeout(resolve, LOADING_DURATION - elapsed));
+            // Accelerate loading animation if not already complete
+            if (!isAccelerated) {
+                const currentTime = Date.now();
+                const elapsed = currentTime - startTime;
+                const currentProgress = Math.min((elapsed / LOADING_DURATION) * 100, 100);
+                
+                if (currentProgress < 100) {
+                    isAccelerated = true;
+                    accelerationStartTime = currentTime;
+                    accelerationStartProgress = currentProgress;
+                    
+                    // Update interval to be more responsive during acceleration
+                    clearInterval(loadingInterval);
+                    loadingInterval = setInterval(() => {
+                        if (updateLoadingBar()) {
+                            // Animation complete, update with response
+                            updateCustomResultWithResponse(container, response, query);
+                        }
+                    }, 5); // 10x faster updates
+                } else {
+                    // Loading already complete, update immediately
+                    clearInterval(loadingInterval);
+                    updateCustomResultWithResponse(container, response, query);
+                }
             }
-
-            // Clear loading interval
-            clearInterval(loadingInterval);
-
-            // Update with the response
-            updateCustomResultWithResponse(container, response, query);
 
         } catch (error) {
             // Clear loading interval

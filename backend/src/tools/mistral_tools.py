@@ -178,11 +178,18 @@ def web_search_agent(query: str) -> dict:
     # Find the message output in the outputs
     for output in response_dict["outputs"]:
         if output["type"] == "message.output":
-            for index, item in enumerate(output["content"]):
-                if item["type"] == "text":
-                    md += item["text"] + ("\n\nSources:" if index == 0 else "\n\n")
-                elif item["type"] == "tool_reference":
-                    md += f"* {item['title']} [{item['url']}]\n"
+            content = output["content"]
+            
+            # Handle case where content is a simple string
+            if isinstance(content, str):
+                md += content
+            # Handle case where content is a list of structured items
+            elif isinstance(content, list):
+                for index, item in enumerate(content):
+                    if item["type"] == "text":
+                        md += item["text"] + ("\n\nSources:" if index == 0 else "\n\n")
+                    elif item["type"] == "tool_reference":
+                        md += f"* {item['title']} [{item['url']}]\n"
             break
     return md
 

@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  sap_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: power-of-europe-backend
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+    networks:
+      - proxy_netwrok
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  proxy_netwrok:
+    external: true
+    driver: bridge

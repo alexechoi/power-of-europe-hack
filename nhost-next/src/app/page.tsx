@@ -21,12 +21,11 @@ export default function Home() {
 				<div className="text-center space-y-8">
 					<div className="space-y-4">
 						<h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-							Welcome to <span className="text-primary">ChatGPT Clone</span>
+							<span className="text-primary">Power of Europe</span>
 						</h1>
 						<p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-7">
-							A modern ChatGPT-style interface built with Next.js, Nhost.io, and
-							shadcn/ui. Experience seamless conversations with a beautiful,
-							responsive design.
+							Discover European tech alternatives for your projects. Our tool and Chrome extension 
+							help developers build with privacy-focused, GDPR-compliant European technologies.
 						</p>
 					</div>
 
@@ -34,7 +33,7 @@ export default function Home() {
 						{!isLoading &&
 							(isAuthenticated ? (
 								<Button asChild size="lg">
-									<Link href="/chat">Start Chatting</Link>
+									<Link href="/dashboard">Open Dashboard</Link>
 								</Button>
 							) : (
 								<>
@@ -42,12 +41,8 @@ export default function Home() {
 										<Link href="/auth">Get Started</Link>
 									</Button>
 									<Button asChild variant="outline" size="lg">
-										<Link
-											href="https://docs.nhost.io"
-											target="_blank"
-											rel="noopener noreferrer"
-										>
-											Documentation
+										<Link href="/extension" target="_blank" rel="noopener noreferrer">
+											Install Extension
 										</Link>
 									</Button>
 								</>
@@ -59,17 +54,17 @@ export default function Home() {
 				<div className="mt-24 space-y-16">
 					<div className="text-center space-y-4">
 						<h2 className="text-3xl font-bold tracking-tight">
-							Powered by Modern Technologies
+							European Tech Sovereignty
 						</h2>
 						<div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
 							{[
-								"Next.js 15",
-								"React 19",
-								"TypeScript",
-								"Tailwind CSS",
-								"Nhost.io",
-								"GraphQL",
-								"PostgreSQL",
+								"GDPR Compliant",
+								"Privacy-First",
+								"Data Sovereignty",
+								"European Hosting",
+								"Open Source",
+								"Ethical AI",
+								"Sustainable Tech",
 							].map((tech) => (
 								<Badge key={tech} variant="secondary">
 									{tech}
@@ -83,14 +78,14 @@ export default function Home() {
 						<Card className="text-center">
 							<CardHeader className="pb-4">
 								<div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-									<div className="text-2xl">🔐</div>
+									<div className="text-2xl">🔍</div>
 								</div>
-								<CardTitle className="text-xl">Chat Interface</CardTitle>
+								<CardTitle className="text-xl">Chrome Extension</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<CardDescription className="text-base">
-									Beautiful ChatGPT-style interface with thread management,
-									responsive design, and smooth user experience.
+									Our browser extension automatically suggests European alternatives 
+									when you browse non-European tech services and APIs.
 								</CardDescription>
 							</CardContent>
 						</Card>
@@ -98,14 +93,14 @@ export default function Home() {
 						<Card className="text-center">
 							<CardHeader className="pb-4">
 								<div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-									<div className="text-2xl">🚀</div>
+									<div className="text-2xl">🇪🇺</div>
 								</div>
-								<CardTitle className="text-xl">Authentication</CardTitle>
+								<CardTitle className="text-xl">Tech Database</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<CardDescription className="text-base">
-									Secure user authentication with Nhost, including email/password
-									and social login options.
+									Access our comprehensive database of European tech alternatives 
+									across categories like cloud services, AI, analytics, and more.
 								</CardDescription>
 							</CardContent>
 						</Card>
@@ -113,14 +108,14 @@ export default function Home() {
 						<Card className="text-center">
 							<CardHeader className="pb-4">
 								<div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-primary/10 flex items-center justify-center">
-									<div className="text-2xl">💾</div>
+									<div className="text-2xl">📊</div>
 								</div>
-								<CardTitle className="text-xl">Modern UI</CardTitle>
+								<CardTitle className="text-xl">Compliance Checker</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<CardDescription className="text-base">
-									Built with shadcn/ui components and Tailwind CSS for a
-									polished, accessible interface.
+									Analyze your tech stack for GDPR compliance and data sovereignty issues, 
+									with actionable recommendations for European alternatives.
 								</CardDescription>
 							</CardContent>
 						</Card>

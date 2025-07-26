@@ -29,9 +29,9 @@ import {
 	Activity,
 	TrendingUp,
 	Users,
-	Home,
 	LogOut,
 	Loader2,
+	MessageCircle,
 } from "lucide-react";
 
 interface LoginAttempt {
@@ -149,9 +149,9 @@ export default function Dashboard() {
 					</div>
 					<div className="flex gap-3">
 						<Button asChild variant="outline" size="sm">
-							<Link href="/">
-								<Home className="mr-2 h-4 w-4" />
-								Home
+							<Link href="/chat">
+								<MessageCircle className="mr-2 h-4 w-4" />
+								Chat
 							</Link>
 						</Button>
 						<Button variant="destructive" size="sm" onClick={handleSignOut}>

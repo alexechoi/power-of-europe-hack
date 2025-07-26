@@ -148,4 +148,4 @@ async def find_more_information(service_name: str):
 
 if __name__ == "__main__":
     import asyncio
-    print(asyncio.run(query_tool_return_json("Cloud hosting service")))
+    print(asyncio.run(find_more_information("Plausible Analytics")))

@@ -24,15 +24,32 @@
             
             if (match && match[1]) {
                 try {
-                    return JSON.parse(match[1].trim());
+                    // Remove all text after the closing bracket "]"
+                    let jsonText = match[1].trim();
+                    const closingBracketIndex = jsonText.lastIndexOf(']');
+                    if (closingBracketIndex !== -1) {
+                        jsonText = jsonText.substring(0, closingBracketIndex + 1);
+                    }
+                    
+                    return JSON.parse(jsonText);
                 } catch (parseError) {
                     console.error('Error parsing JSON from code block:', parseError);
                     return null;
                 }
             }
-            
-            console.error('No valid JSON found in response');
-            return null;
+
+            else {
+                try {
+                    const closingBracketIndex = jsonText.lastIndexOf(']');
+                    if (closingBracketIndex !== -1) {
+                        jsonText = jsonText.substring(0, closingBracketIndex + 1);
+                    }
+                    return JSON.parse(jsonText);
+                } catch (parseError) {
+                    console.error('Error parsing JSON from code block:', parseError);
+                    return null;
+                }
+            }
         }
     }
 

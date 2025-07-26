@@ -12,6 +12,8 @@ import { nhost } from "../../lib/nhost";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 // Removed direct import - now using API route
 
 import {
@@ -892,9 +894,38 @@ export default function ChatInterface() {
 												: "bg-muted rounded-bl-md"
 										}`}
 									>
-										<p className="text-sm whitespace-pre-wrap break-words">
-											{message.content}
-										</p>
+										{message.isUser ? (
+											<p className="text-sm whitespace-pre-wrap break-words">
+												{message.content}
+											</p>
+										) : (
+											<div className="text-sm markdown-content">
+												<ReactMarkdown 
+													remarkPlugins={[remarkGfm]}
+													components={{
+														a: ({ node, ...props }) => (
+															<a 
+																{...props} 
+																target="_blank" 
+																rel="noopener noreferrer" 
+																className="text-blue-500 hover:underline"
+															/>
+														),
+														ul: ({ node, ...props }) => <ul className="list-disc pl-6 my-2" {...props} />,
+														ol: ({ node, ...props }) => <ol className="list-decimal pl-6 my-2" {...props} />,
+														h1: ({ node, ...props }) => <h1 className="text-lg font-bold my-2" {...props} />,
+														h2: ({ node, ...props }) => <h2 className="text-md font-bold my-2" {...props} />,
+														h3: ({ node, ...props }) => <h3 className="font-bold my-1" {...props} />,
+														blockquote: ({ node, ...props }) => (
+															<blockquote className="border-l-2 border-gray-300 pl-4 italic my-2" {...props} />
+														),
+														p: ({ node, ...props }) => <p className="my-1" {...props} />,
+													}}
+												>
+													{message.content}
+												</ReactMarkdown>
+											</div>
+										)}
 									</div>
 								</div>
 							</div>

@@ -27,6 +27,7 @@ mdurl==0.1.2
 mistralai==1.9.3
 multidict==6.6.3
 openai==1.97.1
+orq-ai-sdk==3.9.22
 packaging==25.0
 propcache==0.3.2
 protobuf==6.31.1

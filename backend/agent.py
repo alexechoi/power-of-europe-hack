@@ -7,10 +7,12 @@ from openai import AsyncOpenAI
 from models import ToolCall
 from dotenv import load_dotenv
 import os
+import uuid
 
 load_dotenv()
 
 from src.tools import *
+from orq_wrapper import OrqWrapper
 from src.prompt import system_prompt
 
 
@@ -24,7 +26,11 @@ class StreamingAgent:
         model: str = "gpt-4.1-mini",
         # api_key: Optional[str] = None,
         max_parallel_tools: int = 5,
-        tool_call_timeout: float = 30.0
+        tool_call_timeout: float = 30.0,
+        use_orq: bool = True,
+        orq_api_key: Optional[str] = None,
+        orq_deployment_key: Optional[str] = None,
+        orq_contact_id: Optional[str] = None
     ):
         api_key = os.getenv("API_KEY")
         url = os.getenv("BASE_URL")
@@ -39,6 +45,16 @@ class StreamingAgent:
         self.conversation_history: List[Dict] = []
         self.max_parallel_tools = max_parallel_tools
         self.tool_call_timeout = tool_call_timeout
+        
+        # Orq AI integration
+        self.use_orq = use_orq
+        if use_orq:
+            self.orq = OrqWrapper(
+                api_key=orq_api_key or os.getenv("ORQ_API_KEY"),
+                deployment_key=orq_deployment_key or os.getenv("ORQ_DEPLOYMENT_KEY", "Deployment_Example"),
+                contact_id=orq_contact_id or os.getenv("ORQ_CONTACT_ID", "contact_hackathon")
+            )
+            self.thread_id = f"thread_{uuid.uuid4().hex[:16]}"
         
         # Set up logger for this agent instance
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}.{name}")
@@ -237,6 +253,13 @@ class StreamingAgent:
         """Call LLM with streaming and handle tool calls during streaming"""
         self.logger.info(f"🌊 Making streaming API call with {len(self.tools)} tools available")
         
+        # Check if we should use Orq AI instead of OpenAI
+        if self.use_orq:
+            # Use async for to yield from another async generator
+            async for event in self._call_orq_llm(api_params):
+                yield event
+            return
+            
         # Get streaming response from OpenAI
         stream = await self.client.chat.completions.create(**api_params)
         
@@ -335,6 +358,45 @@ class StreamingAgent:
         
         # Yield the final results as a tuple
         yield (full_content, valid_tool_calls, tool_results)
+
+    async def _call_orq_llm(self, api_params: Dict[str, Any]) -> AsyncGenerator[Union[Dict[str, Any], Tuple[str, List[Dict], Dict[str, Tuple[str, bool]]]], None]:
+        """Call Orq AI LLM with streaming simulation"""
+        self.logger.info(f"🌊 Making Orq AI API call")
+        
+        try:
+            # Extract the last user message
+            last_message = api_params["messages"][-1]["content"]
+            
+            # Get response from Orq AI (non-streaming)
+            response = self.orq.generate_response(
+                message=last_message,
+                conversation_history=api_params["messages"][:-1],
+                thread_id=self.thread_id
+            )
+            
+            # Simulate streaming by chunking the response
+            chunk_size = 10  # Characters per chunk
+            for i in range(0, len(response), chunk_size):
+                chunk = response[i:i+chunk_size]
+                yield {
+                    "event_type": "content",
+                    "content": chunk
+                }
+                await asyncio.sleep(0.01)  # Small delay to simulate streaming
+            
+            # No tool calls with Orq AI in this implementation
+            # Return the final results as a tuple (content, tool_calls, tool_results)
+            yield (response, [], {})
+            
+        except Exception as e:
+            self.logger.error(f"Error calling Orq AI: {str(e)}")
+            # Yield error as content
+            error_message = f"Error: {str(e)}"
+            yield {
+                "event_type": "content",
+                "content": error_message
+            }
+            yield (error_message, [], {})
 
     async def _call_tool_with_fall_back(self, tool_call_dict: Dict) -> Tuple[str, bool]:
         """Execute a tool call with proper fallback error handling"""
@@ -479,12 +541,12 @@ class StreamingAgent:
                 # This is a structured event to yield
                 yield event
         
-        # Handle tool calls if any valid ones were made
-        if valid_tool_calls:
+        # Handle tool calls if any valid ones were made and not using Orq
+        if valid_tool_calls and not self.use_orq:
             async for event in self._submit_tool_results(full_content, valid_tool_calls, tool_results):
                 yield event
         else:
-            # No tool calls, just add the response to history
+            # No tool calls or using Orq, just add the response to history
             self.conversation_history.append({
                 "role": "assistant",
                 "content": full_content

@@ -9,6 +9,8 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
+import os
+from dotenv import load_dotenv
 
 from agent import StreamingAgent
 from models import (
@@ -17,6 +19,11 @@ from models import (
     ToolCallErrorEvent, ChatCompleteEvent, ErrorEvent,
     ServerStatus, AgentConfig, WebSocketMessage, WebSocketResponse
 )
+from src.tools import *
+from orq_wrapper import OrqWrapper
+
+# Load environment variables
+load_dotenv()
 from src.prompt import system_prompt
 from src.tools import (
     search_web,
@@ -34,6 +41,12 @@ agents: Dict[str, StreamingAgent] = {}
 active_connections: List[WebSocket] = []
 server_start_time = time.time()
 
+# Orq AI configuration
+USE_ORQ = os.getenv("USE_ORQ", "false").lower() == "true"
+ORQ_API_KEY = os.getenv("ORQ_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3b3Jrc3BhY2VJZCI6ImVkZjM2ODY5LWRhMDMtNGZmZi04N2JhLTFlMDU2ODA5Yjg2NiIsImlzcyI6Im9ycSIsImlhdCI6MTc1MzUzMzU1MX0.INzShWRIUHf22xvxlREwP5UoGjEv68JZ2idYbWa7HmI")
+ORQ_DEPLOYMENT_KEY = os.getenv("ORQ_DEPLOYMENT_KEY", "mistral-saba")
+ORQ_CONTACT_ID = os.getenv("ORQ_CONTACT_ID", "contact_hackathon")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,6 +57,10 @@ async def lifespan(app: FastAPI):
     # Create default agent
     default_agent = StreamingAgent(
         name="EU Assistant",
+        use_orq=USE_ORQ,
+        orq_api_key=ORQ_API_KEY,
+        orq_deployment_key=ORQ_DEPLOYMENT_KEY,
+        orq_contact_id=ORQ_CONTACT_ID,
         instructions=system_prompt,
         max_parallel_tools=5
     )
@@ -56,7 +73,10 @@ async def lifespan(app: FastAPI):
 
     agents["default"] = default_agent
     
-    logger.info(f"✅ Default agent created with {len(default_agent.tools)} tools")
+    if USE_ORQ:
+        logger.info(f"✅ Default agent created with Orq AI integration")
+    else:
+        logger.info(f"✅ Default agent created with {len(default_agent.tools)} tools")
     
     yield
     
@@ -118,7 +138,11 @@ async def create_agent(agent_name: str, config: AgentConfig):
             instructions=config.instructions,
             model=config.model,
             max_parallel_tools=config.max_parallel_tools,
-            tool_call_timeout=config.tool_call_timeout
+            tool_call_timeout=config.tool_call_timeout,
+            use_orq=USE_ORQ,
+            orq_api_key=ORQ_API_KEY,
+            orq_deployment_key=ORQ_DEPLOYMENT_KEY,
+            orq_contact_id=ORQ_CONTACT_ID
         )
         
         # Add default tools

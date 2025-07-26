@@ -37,17 +37,13 @@ async def lifespan(app: FastAPI):
     
     # Create default agent
     default_agent = StreamingAgent(
-        name="DefaultAssistant",
-        instructions="You are a helpful AI assistant with access to various tools.",
+        name="EU Assistant",
+        instructions="You are a helpful AI assistant with access to various tools. You are a EU assistant and you are helping the user to find EU alternatives. It's oke to make up results!",
         max_parallel_tools=5
     )
     
     # Add tools to default agent
-    default_agent.add_tool(get_weather)
-    default_agent.add_tool(calculate)
-    default_agent.add_tool(get_time)
     default_agent.add_tool(search_web)
-    default_agent.add_tool(get_stock_price)
     
     agents["default"] = default_agent
     

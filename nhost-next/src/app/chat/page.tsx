@@ -7,11 +7,13 @@ import {
 	useUserData,
 	useSignOut,
 } from "@nhost/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { nhost } from "../../lib/nhost";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 // Removed direct import - now using API route
 
 import {
@@ -151,33 +153,38 @@ interface MessageData {
 }
 
 // Helper function to generate thread title
-const generateThreadTitle = async (userMessage: string): Promise<string | null> => {
-  try {
-    const response = await fetch('/api/generate-title', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userMessage }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Title generation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.title || null;
-  } catch (error) {
-    console.error("Error generating title:", error);
-    return null;
-  }
-};
+// Removing this function
+// const generateThreadTitle = async (userMessage: string): Promise<string | null> => {
+//   try {
+//     // Add a small delay to ensure the title generation doesn't interfere with chat
+//     await new Promise(resolve => setTimeout(resolve, 100));
+//     
+//     const response = await fetch('/api/generate-title', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({ userMessage }),
+//     });
+// 
+//     if (!response.ok) {
+//       throw new Error(`Title generation failed: ${response.status}`);
+//     }
+// 
+//     const data = await response.json();
+//     return data.title || null;
+//   } catch (error) {
+//     console.error("Error generating title:", error);
+//     return null;
+//   }
+// };
 
 export default function ChatInterface() {
 	const { isAuthenticated, isLoading } = useAuthenticationStatus();
 	const user = useUserData();
 	const { signOut } = useSignOut();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [inputValue, setInputValue] = useState("");
 	const [isSending, setIsSending] = useState(false);
@@ -202,6 +209,169 @@ export default function ChatInterface() {
 			router.push("/auth");
 		}
 	}, [isAuthenticated, isLoading, router]);
+
+	// Handle query parameter for auto-sending a message
+	useEffect(() => {
+		const query = searchParams.get('query');
+		const newChat = searchParams.get('new') === 'true';
+		
+		// Only proceed if we have a query and user is authenticated
+		if (query && isAuthenticated && user?.id && !isSending) {
+			// Create a small delay to ensure the component is fully rendered
+			const timer = setTimeout(async () => {
+				let threadId = activeThreadId || "";
+				
+				// Create a new thread if requested or if no active thread exists
+				if (newChat || !threadId || threadId === "default") {
+					const newThreadId = await createNewThread(false);
+					if (newThreadId) {
+						threadId = newThreadId;
+					}
+				}
+				
+				// Set the input value to the query
+				setInputValue(query);
+				
+				// Create a temporary message object for immediate UI update
+				const tempUserMessage: Message = {
+					id: Date.now().toString(),
+					content: query,
+					isUser: true,
+					timestamp: new Date(),
+				};
+
+				// Add user message immediately to UI
+				setMessages((prev) => [...prev, tempUserMessage]);
+				setIsSending(true);
+
+				// Check if this is the first message in the thread
+				const isFirstMessage = messages.length === 0;
+
+				// Process the message first
+				(async () => {
+					try {
+						// Save user message to database if we have a valid thread
+						if (threadId && threadId !== "default") {
+							try {
+								await nhost.graphql.request(
+									insertMessageMutation,
+									{
+										thread_id: threadId,
+										user_id: user.id,
+										content: query,
+										is_user: true,
+									}
+								);
+							} catch (err) {
+								console.error("Failed to save user message:", err);
+							}
+						}
+
+						// Prepare conversation history for Mistral
+						const conversationHistory: ChatMessage[] = [
+							...messages.map((msg) => ({
+								role: msg.isUser ? ("user" as const) : ("assistant" as const),
+								content: msg.content,
+							})),
+							{
+								role: "user" as const,
+								content: query,
+							},
+						];
+
+						// Get response from Mistral via API route
+						const response = await fetch('/api/chat', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify({ messages: conversationHistory }),
+						});
+
+						if (!response.ok) {
+							throw new Error(`API request failed: ${response.status}`);
+						}
+
+						const data = await response.json();
+						const aiResponse = data.response;
+
+						// Create temporary bot message for UI
+						const tempBotMessage: Message = {
+							id: (Date.now() + 1).toString(),
+							content: aiResponse,
+							isUser: false,
+							timestamp: new Date(),
+						};
+
+						// Add bot response to UI
+						setMessages((prev) => [...prev, tempBotMessage]);
+
+						// Save bot message to database if we have a valid thread
+						if (threadId && threadId !== "default") {
+							try {
+								await nhost.graphql.request(
+									insertMessageMutation,
+									{
+										thread_id: threadId,
+										user_id: user.id,
+										content: aiResponse,
+										is_user: false,
+									}
+								);
+							} catch (err) {
+								console.error("Failed to save bot message:", err);
+							}
+						}
+
+						// Update thread timestamp in the database
+						if (threadId && threadId !== "default") {
+							try {
+								await nhost.graphql.request(updateThreadMutation, {
+									id: threadId
+								});
+							} catch (err) {
+								console.error("Failed to update thread:", err);
+							}
+						}
+
+						// Update local thread state
+						setThreads((prev) =>
+							prev.map((thread) =>
+								thread.id === threadId
+									? { ...thread, lastMessage: query, timestamp: new Date() }
+									: thread,
+							),
+						);
+						
+						// Clean the URL by removing the query parameters
+						const url = new URL(window.location.href);
+						url.searchParams.delete('query');
+						url.searchParams.delete('new');
+						window.history.replaceState({}, '', url);
+						
+						// Now handle title generation after chat is complete
+						// Removing title generation logic
+						
+					} catch (error) {
+						console.error("Error processing auto-query:", error);
+						
+						// Add error message to UI
+						const errorMessage: Message = {
+							id: (Date.now() + 1).toString(),
+							content: "Sorry, I encountered an error while processing your message. Please try again.",
+							isUser: false,
+							timestamp: new Date(),
+						};
+						setMessages((prev) => [...prev, errorMessage]);
+					} finally {
+						setIsSending(false);
+					}
+				})();
+			}, 500);
+			
+			return () => clearTimeout(timer);
+		}
+	}, [isAuthenticated, activeThreadId, searchParams, user?.id, messages]);
 
 	// Fetch user threads when component mounts
 	useEffect(() => {
@@ -326,16 +496,6 @@ export default function ChatInterface() {
 		// Check if this is the first message in the thread
 		const isFirstMessage = messages.length === 0;
 
-		// Start title generation process if this is the first message
-		// This runs in parallel with the message processing
-		let titleGenerationPromise: Promise<string | null> = Promise.resolve(null);
-		if (isFirstMessage && activeThreadId && activeThreadId !== "default") {
-			titleGenerationPromise = generateThreadTitle(currentInput);
-		}
-
-		// Variable to store the saved user message ID (if successful)
-		let savedUserMessageId: string | null = null;
-
 		try {
 			// Save user message to database if we have a valid thread
 			if (activeThreadId && activeThreadId !== "default" && user?.id) {
@@ -352,8 +512,6 @@ export default function ChatInterface() {
 
 					if (messageError) {
 						console.error("Error saving user message:", messageError);
-					} else if (messageData?.insert_messages_one?.id) {
-						savedUserMessageId = messageData.insert_messages_one.id;
 					}
 				} catch (err) {
 					console.error("Failed to save user message:", err);
@@ -439,6 +597,9 @@ export default function ChatInterface() {
 						: thread,
 				),
 			);
+			
+			// Removing title generation logic
+			
 		} catch (error) {
 			console.error("Error getting AI response:", error);
 
@@ -476,36 +637,6 @@ export default function ChatInterface() {
 			}
 		} finally {
 			setIsSending(false);
-			
-			// Handle title generation result regardless of message success/failure
-			try {
-				const generatedTitle = await titleGenerationPromise;
-				if (generatedTitle && activeThreadId && activeThreadId !== "default") {
-					// Update thread title in the database
-					const { data: titleData, error: titleError } = await nhost.graphql.request(
-						updateThreadTitleMutation,
-						{
-							id: activeThreadId,
-							title: generatedTitle
-						}
-					);
-
-					if (titleError) {
-						console.error("Error updating thread title:", titleError);
-					} else {
-						// Update thread title in the UI
-						setThreads((prev) =>
-							prev.map((thread) =>
-								thread.id === activeThreadId
-									? { ...thread, title: generatedTitle }
-									: thread
-							)
-						);
-					}
-				}
-			} catch (err) {
-				console.error("Failed to process title generation:", err);
-			}
 		}
 	};
 
@@ -553,6 +684,8 @@ export default function ChatInterface() {
 			if (!isInitial) {
 				setSidebarOpen(false);
 			}
+			
+			return threadObj.id;
 		} catch (err) {
 			console.error("Error creating thread:", err);
 			
@@ -571,6 +704,8 @@ export default function ChatInterface() {
 			if (!isInitial) {
 				setSidebarOpen(false);
 			}
+			
+			return fallbackThread.id;
 		}
 	};
 
@@ -759,9 +894,38 @@ export default function ChatInterface() {
 												: "bg-muted rounded-bl-md"
 										}`}
 									>
-										<p className="text-sm whitespace-pre-wrap break-words">
-											{message.content}
-										</p>
+										{message.isUser ? (
+											<p className="text-sm whitespace-pre-wrap break-words">
+												{message.content}
+											</p>
+										) : (
+											<div className="text-sm markdown-content">
+												<ReactMarkdown 
+													remarkPlugins={[remarkGfm]}
+													components={{
+														a: ({ node, ...props }) => (
+															<a 
+																{...props} 
+																target="_blank" 
+																rel="noopener noreferrer" 
+																className="text-blue-500 hover:underline"
+															/>
+														),
+														ul: ({ node, ...props }) => <ul className="list-disc pl-6 my-2" {...props} />,
+														ol: ({ node, ...props }) => <ol className="list-decimal pl-6 my-2" {...props} />,
+														h1: ({ node, ...props }) => <h1 className="text-lg font-bold my-2" {...props} />,
+														h2: ({ node, ...props }) => <h2 className="text-md font-bold my-2" {...props} />,
+														h3: ({ node, ...props }) => <h3 className="font-bold my-1" {...props} />,
+														blockquote: ({ node, ...props }) => (
+															<blockquote className="border-l-2 border-gray-300 pl-4 italic my-2" {...props} />
+														),
+														p: ({ node, ...props }) => <p className="my-1" {...props} />,
+													}}
+												>
+													{message.content}
+												</ReactMarkdown>
+											</div>
+										)}
 									</div>
 								</div>
 							</div>

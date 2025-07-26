@@ -9,6 +9,8 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
+import os
+from dotenv import load_dotenv
 
 from agent import StreamingAgent
 from models import (
@@ -18,6 +20,10 @@ from models import (
     ServerStatus, AgentConfig, WebSocketMessage, WebSocketResponse
 )
 from src.tools import *
+from orq_wrapper import OrqWrapper
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +33,12 @@ logger = logging.getLogger(__name__)
 agents: Dict[str, StreamingAgent] = {}
 active_connections: List[WebSocket] = []
 server_start_time = time.time()
+
+# Orq AI configuration
+USE_ORQ = os.getenv("USE_ORQ", "true").lower() == "true"
+ORQ_API_KEY = os.getenv("ORQ_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3b3Jrc3BhY2VJZCI6ImVkZjM2ODY5LWRhMDMtNGZmZi04N2JhLTFlMDU2ODA5Yjg2NiIsImlzcyI6Im9ycSIsImlhdCI6MTc1MzUzMzU1MX0.INzShWRIUHf22xvxlREwP5UoGjEv68JZ2idYbWa7HmI")
+ORQ_DEPLOYMENT_KEY = os.getenv("ORQ_DEPLOYMENT_KEY", "Deployment_Example")
+ORQ_CONTACT_ID = os.getenv("ORQ_CONTACT_ID", "contact_hackathon")
 
 
 @asynccontextmanager
@@ -39,7 +51,11 @@ async def lifespan(app: FastAPI):
     default_agent = StreamingAgent(
         name="EU Assistant",
         instructions="You are a helpful AI assistant with access to various tools. You are a EU assistant and you are helping the user to find EU alternatives. It's oke to make up results!",
-        max_parallel_tools=5
+        max_parallel_tools=5,
+        use_orq=USE_ORQ,
+        orq_api_key=ORQ_API_KEY,
+        orq_deployment_key=ORQ_DEPLOYMENT_KEY,
+        orq_contact_id=ORQ_CONTACT_ID
     )
     
     # Add tools to default agent
@@ -47,7 +63,10 @@ async def lifespan(app: FastAPI):
     
     agents["default"] = default_agent
     
-    logger.info(f"✅ Default agent created with {len(default_agent.tools)} tools")
+    if USE_ORQ:
+        logger.info(f"✅ Default agent created with Orq AI integration")
+    else:
+        logger.info(f"✅ Default agent created with {len(default_agent.tools)} tools")
     
     yield
     
@@ -109,7 +128,11 @@ async def create_agent(agent_name: str, config: AgentConfig):
             instructions=config.instructions,
             model=config.model,
             max_parallel_tools=config.max_parallel_tools,
-            tool_call_timeout=config.tool_call_timeout
+            tool_call_timeout=config.tool_call_timeout,
+            use_orq=USE_ORQ,
+            orq_api_key=ORQ_API_KEY,
+            orq_deployment_key=ORQ_DEPLOYMENT_KEY,
+            orq_contact_id=ORQ_CONTACT_ID
         )
         
         # Add default tools

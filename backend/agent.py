@@ -13,6 +13,8 @@ load_dotenv()
 
 from src.tools import *
 from orq_wrapper import OrqWrapper
+from src.prompt import system_prompt
+
 
 class StreamingAgent:
     """A simple async agent framework using AsyncOpenAI client"""
@@ -571,14 +573,14 @@ async def streaming_demo():
     # agent.add_tool(get_weather)
     # agent.add_tool(calculate)
     # agent.add_tool(get_time)
-    agent.add_tool(query_tool_by_name)
+    agent.add_tool(query_tool_return_json)
 
     # await query_tool_by_name("AWS Cloud")
     
     queries = [
         # "What's 15 + 27?",
         # "Get the weather in Tokyo and the current time in EST",
-        "Can you find me an EU alternative to 'AWS Cloud'? Use the tool 'query_tool_by_name' to find the alternative.",
+        "Can you find me an EU alternative to 'AWS Cloud'?"
         # "Tell me about the benefits of streaming responses in AI applications"
     ]
     

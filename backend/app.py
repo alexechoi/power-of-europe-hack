@@ -24,6 +24,13 @@ from orq_wrapper import OrqWrapper
 
 # Load environment variables
 load_dotenv()
+from src.prompt import system_prompt
+from src.tools import (
+    search_web,
+    query_tool_return_json,
+    european_alternatives_expert,
+    find_more_information
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -50,18 +57,20 @@ async def lifespan(app: FastAPI):
     # Create default agent
     default_agent = StreamingAgent(
         name="EU Assistant",
-        instructions="You are a helpful AI assistant with access to various tools. You are a EU assistant and you are helping the user to find EU alternatives. It's oke to make up results!",
-        max_parallel_tools=5,
         use_orq=USE_ORQ,
         orq_api_key=ORQ_API_KEY,
         orq_deployment_key=ORQ_DEPLOYMENT_KEY,
         orq_contact_id=ORQ_CONTACT_ID
+        instructions=system_prompt,
+        max_parallel_tools=5
     )
     
     # Add tools to default agent
     default_agent.add_tool(search_web)
     default_agent.add_tool(query_tool_return_json)
-    
+    default_agent.add_tool(european_alternatives_expert)
+    default_agent.add_tool(find_more_information)
+
     agents["default"] = default_agent
     
     if USE_ORQ:

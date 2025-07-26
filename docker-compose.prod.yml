@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14.17
+    container_name: power-of-europe-postgres-prod
+    environment:
+      POSTGRES_DB: power_of_europe
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - power-of-europe-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend FastAPI Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: power-of-europe-backend-prod
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/power_of_europe
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENVIRONMENT=production
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - power-of-europe-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Next.js Service
+  frontend:
+    build:
+      context: ./nhost-next
+      dockerfile: Dockerfile.prod
+    container_name: power-of-europe-frontend-prod
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:8000}
+      - NEXT_PUBLIC_NHOST_SUBDOMAIN=${NEXT_PUBLIC_NHOST_SUBDOMAIN}
+      - NEXT_PUBLIC_NHOST_REGION=${NEXT_PUBLIC_NHOST_REGION}
+      - NHOST_ADMIN_SECRET=${NHOST_ADMIN_SECRET}
+      - NHOST_WEBHOOK_SECRET=${NHOST_WEBHOOK_SECRET}
+      - NHOST_JWT_SECRET=${NHOST_JWT_SECRET}
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - power-of-europe-network
+    restart: unless-stopped
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: power-of-europe-redis-prod
+    volumes:
+      - redis_data:/data
+    networks:
+      - power-of-europe-network
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (optional, for production)
+  nginx:
+    image: nginx:alpine
+    container_name: power-of-europe-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - power-of-europe-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  power-of-europe-network:
+    driver: bridge 

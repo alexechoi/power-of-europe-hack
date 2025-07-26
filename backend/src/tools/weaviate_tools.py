@@ -1,8 +1,15 @@
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import os
 import logging
 import weaviate
 from weaviate import Client, use_async_with_weaviate_cloud, classes
 from weaviate_agents.classes import QueryAgentCollectionConfig
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 headers = {
     "X-OpenAI-Api-Key": os.environ.get("OPENAI_API_KEY"),
@@ -92,3 +99,26 @@ async def query_tool_by_name(tool_name: str):
     return result
 
 
+async def query_tool_return_json(tool_name: str):
+    """
+    Query the QueryAgent for the given tool name in the specified collection.
+    Returns the result of the query.
+    """
+    client = await get_weaviate_client()
+        
+    collection = client.collections.get("EUToolsAlternatives")
+    response = await collection.query.fetch_objects()
+
+    found = False
+
+    output_string = "Found the following alternatives:\n"
+    for o in response.objects:
+        output_string += "- " + str(o.properties) + "\n"
+        found=True
+    
+    await client.close()
+    return output_string if found else "No alternatives found"
+
+if __name__ == "__main__":
+    import asyncio
+    print(asyncio.run(query_tool_return_json("AWS Cloud")))

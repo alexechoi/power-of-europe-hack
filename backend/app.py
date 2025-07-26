@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
     
     # Add tools to default agent
     default_agent.add_tool(search_web)
+    default_agent.add_tool(query_tool_return_json)
     
     agents["default"] = default_agent
     

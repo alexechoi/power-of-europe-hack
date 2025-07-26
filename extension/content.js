@@ -47,7 +47,7 @@
             const url = alt.url || '#';
             const description = alt.description || '';
             const chatQuery = encodeURIComponent(`Tell me more about ${name}`);
-            const chatUrl = `http://localhost:3000/chat?query=${chatQuery}`;
+            const chatUrl = `http://localhost:3000/chat?query=${chatQuery}&new=true`;
             
             return `
                 <div class="alternative-card" data-url="${url}" data-card-index="${index}">

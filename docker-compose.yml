@@ -1,96 +1,22 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:14.17
-    container_name: power-of-europe-postgres
-    environment:
-      POSTGRES_DB: power_of_europe
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
-      POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    networks:
-      - power-of-europe-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Backend FastAPI Service
-  backend:
+  sap_backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: power-of-europe-backend
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/power_of_europe
       - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ENVIRONMENT=development
     ports:
-      - "8000:8000"
+      - "8013:8013"
     volumes:
       - ./backend:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - power-of-europe-network
-    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app:app --host 0.0.0.0 --port 8013 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Frontend Next.js Service
-  frontend:
-    build:
-      context: ./nhost-next
-      dockerfile: Dockerfile
-    container_name: power-of-europe-frontend
-    environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
-      - NEXT_PUBLIC_NHOST_SUBDOMAIN=local
-      - NEXT_PUBLIC_NHOST_REGION=local
-      - NHOST_ADMIN_SECRET=nhost-admin-secret
-      - NHOST_WEBHOOK_SECRET=nhost-webhook-secret
-      - NHOST_JWT_SECRET=0f987876650b4a085e64594fae9219e7781b17506bec02489ad061fba8cb22db
-      - NODE_ENV=development
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./nhost-next:/app
-      - /app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - power-of-europe-network
-    command: npm run dev
-
-  # Redis for caching (optional but useful for production)
-  redis:
-    image: redis:7-alpine
-    container_name: power-of-europe-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - power-of-europe-network
-    command: redis-server --appendonly yes
-
-volumes:
-  postgres_data:
-  redis_data:
-
-networks:
-  power-of-europe-network:
-    driver: bridge 

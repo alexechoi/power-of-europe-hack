@@ -17,7 +17,11 @@ from models import (
     ToolCallErrorEvent, ChatCompleteEvent, ErrorEvent,
     ServerStatus, AgentConfig, WebSocketMessage, WebSocketResponse
 )
-from src.tools import *
+from src.tools import (
+    search_web,
+    query_tool_return_json,
+    european_alternatives_expert
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +49,7 @@ async def lifespan(app: FastAPI):
     # Add tools to default agent
     default_agent.add_tool(search_web)
     default_agent.add_tool(query_tool_return_json)
+    default_agent.add_tool(european_alternatives_expert)
     
     agents["default"] = default_agent
     

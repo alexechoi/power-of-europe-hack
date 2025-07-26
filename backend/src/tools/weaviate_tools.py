@@ -6,6 +6,7 @@ import logging
 import weaviate
 from weaviate import Client, use_async_with_weaviate_cloud, classes
 from weaviate_agents.classes import QueryAgentCollectionConfig
+from weaviate.classes.query import MetadataQuery
 
 from dotenv import load_dotenv
 
@@ -81,34 +82,37 @@ async def get_query_agent(collection_name, client=None):
     return agent
 
 
-async def query_tool_by_name(tool_name: str):
+async def european_alternatives_expert(service_description: str):
     """
-    Query the QueryAgent for the given tool name in the specified collection.
-    Returns the result of the query.
+    EU based alternatives expert.
+    Use this tool only if the user asks for "expert advice". This tool takes a while, but will return the best possible alternative.
     """
     logging.info("Getting the query agent!")
     agent = await get_query_agent("EUToolsAlternatives")
     logging.info(f"retreived query agent: {agent}")
     # The QueryAgent interface may vary; assuming an async 'run' method that takes a string
     try:
-        result = await agent.run(f"Please find EU based tools that are similar to {tool_name}")
+        result = await agent.run(f"Please find EU based tools that are similar to {service_description}")
     except Exception as e:
-        logging.error(f"Failed to query agent for tool '{tool_name}': {e}", exc_info=True)
+        logging.error(f"Failed to query agent for tool '{service_description}': {e}", exc_info=True)
         result = None
     logging.info(f"Got result {getattr(result, 'final_answer', None)}")
     return result
 
 
-async def query_tool_return_json(tool_name: str):
+async def query_tool_return_json(service_description: str, limit: int = 10):
     """
-    Query the QueryAgent for the given tool name in the specified collection.
-    Returns the result of the query.
+    Find EU based alternatives to the given description of a service. Insert a service description and the tool will return a list of alternatives.
+    e.g. "Cloud hosting service"
     """
     client = await get_weaviate_client()
         
     collection = client.collections.get("EUToolsAlternatives")
-    response = await collection.query.fetch_objects()
-
+    response = await collection.query.near_text(
+        query=service_description,
+        limit=limit,
+        return_metadata=MetadataQuery(distance=True)
+    )
     found = False
 
     output_string = "Found the following alternatives:\n"
@@ -121,4 +125,4 @@ async def query_tool_return_json(tool_name: str):
 
 if __name__ == "__main__":
     import asyncio
-    print(asyncio.run(query_tool_return_json("AWS Cloud")))
+    print(asyncio.run(query_tool_return_json("Cloud hosting service")))

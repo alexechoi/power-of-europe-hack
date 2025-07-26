@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Nhost Next.js Template",
-	description: "A simple Nhost.io boilerplate template with Next.js",
+	title: "sAIpiens",
+	description: "Power of Europe Hackathon",
 };
 
 export default function RootLayout({

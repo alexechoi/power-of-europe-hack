@@ -12,6 +12,64 @@
         return urlParams.get('q') || '';
     }
 
+    // Parse JSON from response that may contain ```json code blocks
+    function parseJSONFromResponse(response) {
+        try {
+            // First try to parse the entire response as JSON
+            return JSON.parse(response);
+        } catch (e) {
+            // If that fails, look for ```json code blocks
+            const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
+            const match = response.match(jsonBlockRegex);
+            
+            if (match && match[1]) {
+                try {
+                    return JSON.parse(match[1].trim());
+                } catch (parseError) {
+                    console.error('Error parsing JSON from code block:', parseError);
+                    return null;
+                }
+            }
+            
+            console.error('No valid JSON found in response');
+            return null;
+        }
+    }
+
+    // Create HTML for alternative cards
+    function createAlternativeCards(alternatives) {
+        if (!Array.isArray(alternatives) || alternatives.length === 0) {
+            return '<div class="no-alternatives">No alternatives found.</div>';
+        }
+
+        return alternatives.map((alt, index) => {
+            const name = alt.name || 'Unknown Service';
+            const url = alt.url || '#';
+            const description = alt.description || '';
+            const chatQuery = encodeURIComponent(`Tell me more about ${name}`);
+            const chatUrl = `http://localhost:3000/chat?query=${chatQuery}`;
+            
+            return `
+                <div class="alternative-card" data-url="${url}" data-card-index="${index}">
+                    <div class="alternative-header">
+                        <h4 class="alternative-name">${name}</h4>
+                        <div class="alternative-url">${url}</div>
+                    </div>
+                    ${description ? `<div class="alternative-description">${description}</div>` : ''}
+                    <div class="alternative-footer">
+                        <span class="alternative-badge">🇪🇺 EU Alternative</span>
+                        <div class="alternative-actions">
+                            <button class="learn-more-btn" data-chat-url="${chatUrl}" data-name="${name}">
+                                💬 Learn More
+                            </button>
+                            <span class="alternative-arrow">→</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
     // Wait for the page to load completely
     function waitForElement(selector, timeout = 10000) {
         return new Promise((resolve, reject) => {
@@ -50,7 +108,19 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: `Find me an EU alternatives for ${query}`,
+                    message: `Send me an EU alternative for ${query}
+
+Do not use web search! Answer imidiatly and return a valid JSON. use this template:
+
+[
+  {
+    "name": "name of alternative",
+    "url": "URL of alternative",
+  },
+  ...
+]
+
+if the URL is none existing; return google url.`,
                     agent_name: "default",
                     reset_history: false,
                     parallel_tools: true
@@ -69,20 +139,108 @@
         }
     }
 
+    // Attach click event listeners to alternative cards
+    function attachCardEventListeners(container) {
+        const cards = container.querySelectorAll('.alternative-card[data-url]');
+        cards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Don't trigger card click if clicking on a button
+                if (e.target.classList.contains('learn-more-btn') || e.target.closest('.learn-more-btn')) {
+                    return;
+                }
+                
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                if (url && url !== '#') {
+                    window.open(url, '_blank');
+                }
+            });
+            
+            // Add keyboard accessibility
+            card.setAttribute('tabindex', '0');
+            card.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    // Don't trigger if focus is on a button
+                    if (e.target.classList.contains('learn-more-btn')) {
+                        return;
+                    }
+                    
+                    e.preventDefault();
+                    const url = this.getAttribute('data-url');
+                    if (url && url !== '#') {
+                        window.open(url, '_blank');
+                    }
+                }
+            });
+        });
+
+        // Attach event listeners to "Learn More" buttons
+        const learnMoreBtns = container.querySelectorAll('.learn-more-btn');
+        learnMoreBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent card click
+                const chatUrl = this.getAttribute('data-chat-url');
+                if (chatUrl) {
+                    window.open(chatUrl, '_blank');
+                }
+            });
+            
+            // Add keyboard accessibility for buttons
+            btn.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const chatUrl = this.getAttribute('data-chat-url');
+                    if (chatUrl) {
+                        window.open(chatUrl, '_blank');
+                    }
+                }
+            });
+        });
+    }
+
     // Update the custom result with the response
     function updateCustomResultWithResponse(container, response, query) {
-        container.innerHTML = `
-            <div class="custom-result-container">
-                <h3 class="custom-result-title">
-                    <a href="#" class="custom-result-link">EU Alternatives for "${query}"</a>
-                </h3>
-                <div class="custom-result-url">Powered by AI Assistant</div>
-                <div class="custom-result-snippet">
-                    ${response}
+        // Parse JSON from the response
+        const alternatives = parseJSONFromResponse(response);
+        
+        if (alternatives && Array.isArray(alternatives)) {
+            // Create cards for the alternatives
+            const alternativeCards = createAlternativeCards(alternatives);
+            
+            container.innerHTML = `
+                <div class="custom-result-container">
+                    <h3 class="custom-result-title">
+                        <span class="custom-result-link">🇪🇺 EU Alternatives for "${query}"</span>
+                    </h3>
+                    <div class="custom-result-url">Found ${alternatives.length} European alternative${alternatives.length !== 1 ? 's' : ''}</div>
+                    <div class="custom-result-snippet">
+                        <div class="alternatives-grid">
+                            ${alternativeCards}
+                        </div>
+                    </div>
+                    <div class="custom-result-badge success">EU Alternatives</div>
                 </div>
-                <div class="custom-result-badge">EU Alternatives</div>
-            </div>
-        `;
+            `;
+            
+            // Attach event listeners to the cards
+            attachCardEventListeners(container);
+        } else {
+            // Fallback to original response if JSON parsing fails
+            container.innerHTML = `
+                <div class="custom-result-container">
+                    <h3 class="custom-result-title">
+                        <a href="#" class="custom-result-link">EU Alternatives for "${query}"</a>
+                    </h3>
+                    <div class="custom-result-url">Powered by AI Assistant</div>
+                    <div class="custom-result-snippet">
+                        ${response}
+                    </div>
+                    <div class="custom-result-badge">EU Alternatives</div>
+                </div>
+            `;
+        }
     }
 
     // Update the custom result with error message

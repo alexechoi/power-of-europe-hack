@@ -87,3 +87,53 @@ export async function getChatCompletion(
 		);
 	}
 }
+
+export async function generateThreadTitle(
+	userMessage: string,
+	aiResponse: string = ""
+): Promise<string> {
+	try {
+		const prompt = aiResponse 
+			? `Based on this conversation, generate a concise and relevant title (3-5 words max):\nUser: ${userMessage}\nAssistant: ${aiResponse}`
+			: `Generate a concise and relevant title (3-5 words max) for a conversation that starts with this message:\n${userMessage}`;
+
+		const backendRequest: BackendChatRequest = {
+			message: prompt,
+			reset_history: true,
+			parallel_tools: false,
+			agent_name: "default"
+		};
+
+		const response = await fetch(`${BACKEND_URL}/chat`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(backendRequest),
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			throw new Error(`Backend API error: ${response.status} - ${errorText}`);
+		}
+
+		const data: BackendChatResponse = await response.json();
+		
+		if (!data.response) {
+			throw new Error("No title generated from backend");
+		}
+
+		// Clean up the title (remove quotes if present)
+		let title = data.response.trim();
+		if ((title.startsWith('"') && title.endsWith('"')) || 
+			(title.startsWith("'") && title.endsWith("'"))) {
+			title = title.substring(1, title.length - 1);
+		}
+		
+		return title.length > 50 ? title.substring(0, 47) + "..." : title;
+	} catch (error) {
+		console.error("Error generating title:", error);
+		// Return a fallback title if generation fails
+		return "New Conversation";
+	}
+}

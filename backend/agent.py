@@ -48,7 +48,7 @@ class StreamingAgent:
         self.use_orq = use_orq
         if use_orq:
             self.orq = OrqWrapper(
-                api_key=orq_api_key or os.getenv("ORQ_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3b3Jrc3BhY2VJZCI6ImVkZjM2ODY5LWRhMDMtNGZmZi04N2JhLTFlMDU2ODA5Yjg2NiIsImlzcyI6Im9ycSIsImlhdCI6MTc1MzUzMzU1MX0.INzShWRIUHf22xvxlREwP5UoGjEv68JZ2idYbWa7HmI"),
+                api_key=orq_api_key or os.getenv("ORQ_API_KEY"),
                 deployment_key=orq_deployment_key or os.getenv("ORQ_DEPLOYMENT_KEY", "Deployment_Example"),
                 contact_id=orq_contact_id or os.getenv("ORQ_CONTACT_ID", "contact_hackathon")
             )

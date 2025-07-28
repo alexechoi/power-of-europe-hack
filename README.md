@@ -1,6 +1,6 @@
-# 💬 Saipiens - European Tech Sovereignty - Nhost + Mistral AI Template
+# 💬 Saipiens - European Tech Sovereignty - European Alternative Agent Extension
 
-A **modern ChatGPT-style interface** powered by **Mistral AI**, built with **Next.js 15**, **Nhost.io**, and **shadcn/ui**. This template provides a complete AI chat application with authentication, intelligent responses, thread management, and a beautiful responsive design, all focused on European digital sovereignty.
+This application provides a complete Chrome Extension + AI chat application with authentication, intelligent responses, thread management, and a beautiful responsive design, all focused on European digital sovereignty.
 
 ![Nhost + Next.js](https://img.shields.io/badge/Nhost-Next.js-blue?style=for-the-badge&logo=nextdotjs)
 ![Mistral AI](https://img.shields.io/badge/Mistral-AI-FF6B35?style=for-the-badge&logo=ai&logoColor=white)
@@ -390,6 +390,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📄 License
 
 This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+## Team
+This project was built at the Tech Makers Power of Europe Hackathon in Amsterdam
+
+- <a href="https://github.com/FlorisFok">Floris Fok</a>
+- <a href="https://github.com/Jeroentjuuh">Jeroen Janssen</a>
+- <a href="https://github.com/alexechoi">Alex Choi</a>
 
 ---
 
